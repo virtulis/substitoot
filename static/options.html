@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Substitoot options</title>
+	<style>
+		body {
+			display: flex;
+			flex-direction: column;
+			gap: 16px;
+			padding: 16px 0;
+		}
+		h3, h4 {
+			margin: 0;
+		}
+		input {
+			font-size: 120%;
+		}
+		input[type="number"] {
+			width: 5em;
+		}
+		.row {
+			display: flex;
+			align-items: center;
+			gap: 8px;
+		}
+		.checkbox {
+			display: grid;
+			grid-auto-columns: min-content 1fr;
+			align-items: flex-start;
+			gap: 8px;
+		}
+		.checkbox > :not(input) {
+			grid-column: 2;
+		}
+		.column {
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+		}
+		.actions {
+			display: flex;
+			gap: 16px;
+		}
+		.actions button {
+			font-size: 120%;
+		}
+		.fix {
+			display: none;
+		}
+		.fix.visible {
+			display: block;
+		}
+		.fix button {
+			outline: 2px solid rgba(255, 0, 0, 0.5);
+			margin: 16px;
+			outline-offset: 14px;
+		}
+	</style>
+</head>
+<body>
+
+<div class="fix" id="fix_ctor">
+	<button id="fix_permissions" type="button">Fix permissions</button>
+</div>
+
+<div class="column">
+	<h3><label for="instances">Enable on instances:</label></h3>
+	<div>Comma-separated list of instance domain names to enable the extension on:</div>
+	<input id="instances" placeholder="mastodon.social, https://loud.computer/, ..."/>
+</div>
+<div class="row">
+	<label for="cache_content_mins">Cache remote content for</label>
+	<input disabled id="cache_content_mins" type="number"/>
+	<span>minutes.</span>
+	<small>(zero disables caching)</small>
+</div>
+<div class="checkbox">
+	<input disabled type="checkbox" id="bypass_followed"/>
+	<label for="bypass_followed">
+		Bypass any remote toots by followed users<br/>
+	</label>
+	<small>
+		Only for toots written after the follow.
+		Mastodon <em>should</em> already have up-to-date replies.
+	</small>
+</div>
+<div class="checkbox">
+	<input disabled type="checkbox" id="preload_home"/>
+	<label for="preload_home">Preload context in advance for boosted toots in your timeline</label>
+</div>
+<div class="column">
+	<h4><label for="skip_instances">Fisable for instances:</label></h4>
+	<div>Comma-separated list of domain names that the extension should not try to fetch statuses from. Will still include them if found elsewhere.</div>
+	<input id="skip_instances" placeholder="kludge.guru, ..."/>
+</div>
+<div class="actions">
+	<button type="button">Clear cached metadata</button>
+</div>
+
+<script src="../dist/options.js"></script>
+
+</body>
+</html>

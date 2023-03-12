@@ -1,8 +1,10 @@
 {
 	"name": "substitoot",
-	"version": "0.1.0",
+	"version": "0.2.0",
+	"private": true,
+	"type": "module",
 	"scripts": {
-		"build": "pnpm exec esbuild --bundle --outdir=dist src/background.ts",
+		"build": "pnpm exec esbuild --bundle --outdir=dist src/background.ts src/options.ts",
 		"watch": "pnpm run build --watch",
 		"package": "web-ext build --ignore-files src *.iml tsconfig.json pnpm-lock.yaml"
 	},

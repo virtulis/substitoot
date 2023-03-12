@@ -1,6 +1,6 @@
-import { doFetch } from './requests';
 
-interface Thing {
+
+export interface Thing {
 	id: string;
 	url: string;
 }
@@ -21,4 +21,9 @@ export interface StatusInfoRecord {
 	hostname: string;
 	id: string | null;
 	account: string | null;
+}
+
+export interface ContextResponse {
+	ancestors: Status[];
+	descendants: Status[];
 }
