@@ -1,10 +1,10 @@
 {
 	"description": "WARNING: Experimental, potentially unsafe. Intercepts Mastodon API requests and appends any missing replies directly from the source server.",
-	"manifest_version": 3,
+	"manifest_version": 2,
 	"name": "Substitoot — a transparent toot fetcher",
 	"short_name": "Substitoot",
 	"author": "virtulis",
-	"version": "0.1",
+	"version": "0.1.1",
 	"homepage_url": "https://github.com/virtulis/substitoot",
 	"icons": {
 		"48": "logo.svg"
@@ -14,9 +14,7 @@
 		"webRequestBlocking",
 		"webRequestFilterResponse",
 		"webNavigation",
-		"scripting"
-	],
-	"host_permissions": [
+		"scripting",
 		"<all_urls>"
 	],
 	"background": {

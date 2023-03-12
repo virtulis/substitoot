@@ -3,7 +3,6 @@
 		"target": "ESNext",
 		"strict": true,
 		"sourceMap": true,
-		"incremental": true,
 		"noEmit": true
 	},
 	"include": [

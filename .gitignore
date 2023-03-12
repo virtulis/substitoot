@@ -5,3 +5,5 @@ tsconfig.tsbuildinfo
 
 /*.iml
 /.idea
+
+/web-ext-artifacts

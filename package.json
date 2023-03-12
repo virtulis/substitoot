@@ -3,7 +3,8 @@
 	"version": "0.1.0",
 	"scripts": {
 		"build": "pnpm exec esbuild --bundle --outdir=dist src/background.ts",
-		"watch": "pnpm run build --watch"
+		"watch": "pnpm run build --watch",
+		"package": "web-ext build --ignore-files src *.iml tsconfig.json pnpm-lock.yaml"
 	},
 	"devDependencies": {
 		"@types/firefox-webext-browser": "^111.0.0",
