@@ -29,9 +29,28 @@ export async function reloadSettings() {
 }
 
 export async function initSettings(onChange: () => any) {
-	browser.storage.sync.onChanged.addListener(changes => {
-		if (changes.settings) onChange();
+
+	browser.storage.sync.onChanged.addListener(async changes => {
+		if (!changes.settings) return;
+		await reloadSettings();
+		onChange();
 	});
+	browser.permissions.onAdded.addListener(onChange);
+	
 	await reloadSettings();
 	onChange();
+	
+}
+
+export function computePermissions(instances: string[]): browser.permissions.Permissions {
+	return {
+		origins: instances.map(host => `https://${host}/*`),
+		permissions: [
+			'webRequest',
+			'webRequestBlocking',
+			'webRequestFilterResponse',
+			'webNavigation',
+			'scripting',
+		],
+	};
 }

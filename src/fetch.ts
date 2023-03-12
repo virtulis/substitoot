@@ -1,7 +1,6 @@
 import { remoteToLocalCache } from './remapping';
 import { doFetch, requestsInProgress } from './requests';
 import { StatusInfoRecord } from './types';
-import { getSettings } from './settings';
 
 export const statusInfoCache = new Map<string, StatusInfoRecord | Promise<StatusInfoRecord>>();
 export const statusInfoAwaiters = new Map<string, Array<(s: StatusInfoRecord) => void>>();
@@ -41,7 +40,10 @@ export async function fetchRemoteStatusOnServer(hostname: string, uri: string) {
 	
 	const promise: Promise<string | null> = doFetch(search)
 		.then(res => res.json())
-		.then(res => res.statuses?.[0]?.id || null)
+		.then(res => {
+			console.log('search res', res);
+			return res.statuses?.[0]?.id || null;
+		})
 		.catch(e => {
 			console.error(e);
 			return null;

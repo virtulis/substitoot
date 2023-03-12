@@ -9,7 +9,6 @@ export const ownRequests = new Set<string>();
 
 export function wrapHandler(details: RequestDetails, handler: JSONHandler, url?: URL): BlockingResponse {
 	
-	if (ownRequests.has(details.url)) return {};
 	console.log('handle', details.url);
 	
 	const filter = browser.webRequest.filterResponseData(details.requestId);
@@ -20,7 +19,7 @@ export function wrapHandler(details: RequestDetails, handler: JSONHandler, url?:
 		buffers.push(event.data);
 		filter.write(event.data);
 	};
-	filter.onstop = async event => {
+	filter.onstop = async () => {
 		filter.disconnect();
 		try {
 			const str = buffers.map(buf => decoder.decode(buf, { stream: true })).join('');
@@ -38,7 +37,6 @@ export function wrapHandler(details: RequestDetails, handler: JSONHandler, url?:
 
 export function wrapRewriter(details: RequestDetails, rewriter: JSONRewriter, url?: URL): BlockingResponse {
 	
-	if (ownRequests.has(details.url)) return {};
 	console.log('rewrite', details.url);
 	
 	const filter = browser.webRequest.filterResponseData(details.requestId);
@@ -47,7 +45,7 @@ export function wrapRewriter(details: RequestDetails, rewriter: JSONRewriter, ur
 	const encoder = new TextEncoder();
 	
 	filter.ondata = event => buffers.push(event.data);
-	filter.onstop = async event => {
+	filter.onstop = async () => {
 		try {
 			const str = buffers.map(buf => decoder.decode(buf, { stream: true })).join('');
 			const body = JSON.parse(str);
@@ -67,7 +65,5 @@ export function wrapRewriter(details: RequestDetails, rewriter: JSONRewriter, ur
 
 export function doFetch(url: string, init?: RequestInit) {
 	ownRequests.add(url);
-	const promise = fetch(url, init);
-	promise.finally(() => ownRequests.delete(url));
-	return promise;
+	return fetch(url, init).finally(() => ownRequests.delete(url));
 }

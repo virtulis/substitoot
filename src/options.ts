@@ -1,4 +1,4 @@
-import { defaultSettings, Settings } from './settings';
+import { computePermissions, defaultSettings, Settings } from './settings';
 
 let settings = defaultSettings;
 const keys = Object.keys(settings) as Array<keyof Settings>;
@@ -39,25 +39,13 @@ async function save() {
 	await checkPermissions();
 }
 
-function computePermissions(): browser.permissions.Permissions {
-	return {
-		origins: settings.instances.map(host => `https://${host}/*`),
-		permissions: [
-			'webRequest',
-			'webRequestBlocking',
-			'webRequestFilterResponse',
-			'webNavigation',
-		],
-	};
-}
-
 async function checkPermissions() {
-	const havePerm = await browser.permissions.contains(computePermissions());
+	const havePerm = await browser.permissions.contains(computePermissions(settings.instances));
 	document.getElementById('fix_ctor')!.classList.toggle('visible', !havePerm);
 }
 
 function requestPermissions() {
-	browser.permissions.request(computePermissions());
+	browser.permissions.request(computePermissions(settings.instances));
 }
 
 for (const key of ['instances', 'skip_instances'] as const) {
