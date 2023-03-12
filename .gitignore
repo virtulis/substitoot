@@ -1,0 +1,7 @@
+node_modules/
+tsconfig.tsbuildinfo
+
+/dist
+
+/*.iml
+/.idea
