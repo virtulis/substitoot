@@ -15,6 +15,7 @@ export interface Status extends Thing {
 
 export interface Account extends Thing {
 	username?: string;
+	acct?: string;
 }
 
 export interface StatusInfoRecord {

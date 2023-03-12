@@ -58,6 +58,7 @@ export async function mergeContextResponses({ localId, localURL, record, localRe
 		else if (accKey) {
 			const accUrl = new URL(account.url);
 			account.id = `stt:a:${accUrl.hostname}:${encodeURIComponent(accUrl.pathname.slice(1))}`;
+			if (account.acct && !account.acct.includes('@')) account.acct += `@${accUrl.hostname}`;
 			accounts.set(accKey, account);
 			console.log('new acct', accKey);
 		}
