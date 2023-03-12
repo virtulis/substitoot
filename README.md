@@ -19,3 +19,15 @@ A Firefox extension that loads *all* replies to toots from remote instances.
 * Does not inject any scripts at all (except for a `history.replaceState` call on navigation) and does not rely on DOM events.
 * Serves as a demo of what Mastodon should just be doing out of the box, seriously.
 * Well I already wrote it, so might as well release and see how it goes.
+
+## Building
+	
+	npm install -g pnpm # if needed
+	
+	pnpm install
+	pnpm build
+	pnpm package
+
+## Development
+
+Run `pnpm watch` in one terminal and `web-ext run` in another. Refer to [web-ext docs](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/).
