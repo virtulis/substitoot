@@ -3,6 +3,7 @@ export type BlockingResponse = browser.webRequest.BlockingResponse;
 
 export type JSONRewriter = (json: Record<string, any>, url: URL) => object | Promise<Record<string, any>>;
 
+export const requestsInProgress = new Set<string>();
 export const ownRequests = new Set<string>();
 
 export function wrapRewriter(details: RequestDetails, rewriter: JSONRewriter, url?: URL): BlockingResponse {
@@ -19,7 +20,6 @@ export function wrapRewriter(details: RequestDetails, rewriter: JSONRewriter, ur
 	filter.onstop = async event => {
 		try {
 			const str = buffers.map(buf => decoder.decode(buf, { stream: true })).join('');
-			console.log(str.length);
 			const body = JSON.parse(str);
 			const result = await rewriter(body, url ?? new URL(details.url));
 			filter.write(encoder.encode(JSON.stringify(result)));
@@ -40,10 +40,18 @@ export function rewriteApiRequest(
 	override: null | ((details: RequestDetails) => Promise<BlockingResponse | null>),
 	rewriter: JSONRewriter,
 ) {
+
+	const filter: browser.webRequest.RequestFilter = {
+		urls: ['https://*/api/*/' + match.join('/')],
+		types: ['xmlhttprequest'],
+	};
 	
 	browser.webRequest.onBeforeRequest.addListener(
 		async details => {
-			console.log(details.url);
+			console.log('req', details.url);
+			requestsInProgress.add(details.url);
+			// console.log('req', details.url);
+			
 			const parsed = new URL(details.url);
 			const parts = parsed.pathname.split('/').slice(3);
 			if (parts.length != match.length || !match.every((m, i) => m == '*' || m == parts[i])) return {};
@@ -57,11 +65,17 @@ export function rewriteApiRequest(
 			return wrapRewriter(details, rewriter, parsed);
 			
 		},
-		{
-			urls: ['https://*/api/*/' + match.join('/')],
-			types: ['xmlhttprequest'],
-		},
+		filter,
 		['blocking'],
+	);
+	
+	browser.webRequest.onCompleted.addListener(
+		details => requestsInProgress.delete(details.url),
+		filter,
+	);
+	browser.webRequest.onErrorOccurred.addListener(
+		details => requestsInProgress.delete(details.url),
+		filter,
 	);
 	
 }

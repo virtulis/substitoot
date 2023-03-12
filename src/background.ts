@@ -1,15 +1,66 @@
 import * as DOMPurify from 'dompurify';
-import { BlockingResponse, doFetch, RequestDetails, rewriteApiRequest } from './requests';
-import {
-	Account,
-	contextLists,
-	getStatusRecord,
-	remapIdFields,
-	Status,
-	statusInfoAwaiters,
-	statusInfoCache,
-	StatusInfoRecord,
-} from './resolve';
+import { BlockingResponse, doFetch, RequestDetails, requestsInProgress, rewriteApiRequest } from './requests';
+import { Account, Status, StatusInfoRecord } from './types';
+
+export const contextLists = ['ancestors', 'descendants'] as const;
+export const remapIdFields = ['in_reply_to_id', 'in_reply_to_account_id'] as const;
+
+export const statusInfoCache = new Map<string, StatusInfoRecord | Promise<StatusInfoRecord>>();
+export const statusInfoAwaiters = new Map<string, Array<(s: StatusInfoRecord) => void>>();
+
+export const remoteToLocalCache = new Map<string, string | null | Promise<string | null>>();
+
+export const getStatusRecord = async (hostname: string, id: string) => {
+	const key = `${hostname}:${id}`;
+	return statusInfoCache.get(key) ?? await new Promise<StatusInfoRecord | null>(resolve => {
+		
+		console.log('wait for status?', key);
+		
+		const queue = statusInfoAwaiters.get(key);
+		
+		if (queue) queue.push(resolve);
+		else statusInfoAwaiters.set(key, [resolve]);
+		
+		const url = `https://${hostname}/api/v1/statuses/${id}`;
+		console.log('status at', requestsInProgress.has(url), url);
+		if (!requestsInProgress.has(url)) setTimeout(() => {
+			if (requestsInProgress.has(url)) return;
+			console.log('trigger', url);
+			fetch(url); // this will be processed by the rewriter, hopefully
+		}, 20);
+		
+		setTimeout(() => statusInfoAwaiters.delete(key), 60_000);
+		setTimeout(resolve, 1_000);
+		
+	});
+};
+
+export async function fetchRemoteStatusOnServer(hostname: string, uri: string) {
+
+	const key = `${hostname}:${uri}`;
+	if (remoteToLocalCache.has(key)) return await remoteToLocalCache.get(key);
+	
+	const search = `https://${hostname}/api/v2/search?q=${uri}&resolve=true&limit=1&type=statuses`;
+	console.log('resolve', uri, search);
+	
+	const promise: Promise<string | null> = doFetch(search)
+		.then(res => res.json())
+		.then(res => res.statuses?.[0]?.id || null)
+		.catch(e => {
+			console.error(e);
+			return null;
+		});
+	remoteToLocalCache.set(key, promise);
+	console.log('wait');
+	
+	const id = await promise;
+	remoteToLocalCache.set(key, id);
+	console.log('what', id);
+	
+	return id;
+	
+}
+
 
 const maybeFetchAndRedirect = async (details: RequestDetails): Promise<BlockingResponse | null> => {
 	
@@ -20,19 +71,11 @@ const maybeFetchAndRedirect = async (details: RequestDetails): Promise<BlockingR
 	if (!match) return null;
 	
 	const [refHost, refPath, etc] = [...match].slice(1);
-	
-	const uri = `https://${refHost}/${decodeURIComponent(refPath)}`;
-	const search = `https://${hostname}/api/v2/search?q=${uri}&resolve=true&limit=1&type=statuses`;
-	console.log('resolve', uri, search);
-	
-	const res = await doFetch(search).then(res => res.json());
-	const status = res.statuses?.[0];
-	console.log('got', status?.id);
-	
-	if (!status) return null;
+	const id = await fetchRemoteStatusOnServer(hostname, `https://${refHost}/${decodeURIComponent(refPath)}`);
+	if (!id) return null;
 	
 	return {
-		redirectUrl: `https://${hostname}/api/v1/statuses/${status.id}${etc}`,
+		redirectUrl: `https://${hostname}/api/v1/statuses/${id}${etc}`,
 	};
 	
 };
@@ -64,15 +107,15 @@ rewriteApiRequest(['statuses', '*'], maybeFetchAndRedirect, async (json, url) =>
 rewriteApiRequest(['statuses', '*', 'context'], maybeFetchAndRedirect, async (json, url) => {
 	
 	const id = url.pathname.match(/\/statuses\/([^/]+)\/context$/)![1];
-	const key = `${url.hostname}:${id}`;
 	
-	const record = await getStatusRecord(key);
+	const record = await getStatusRecord(url.hostname, id);
 	if (!record || !record.id) return json;
 	
 	const hostname = record.hostname;
 	if (hostname == url.hostname) return json;
 	
 	const srcUrl = `https://${hostname}/api/v1/statuses/${record.id}/context`;
+	console.log('fetch', srcUrl);
 	
 	const srcData = await doFetch(srcUrl).then(res => res.json());
 	
@@ -141,14 +184,83 @@ rewriteApiRequest(['statuses', '*', 'context'], maybeFetchAndRedirect, async (js
 	
 });
 
-browser.webNavigation.onHistoryStateUpdated.addListener(
-	details => {
-		console.log('H?', details.url);
+const handlingTabs = new Set<number>();
+const getRedirFromNav = async (url: string) => {
+
+	const { hostname, pathname } = new URL(url);
+	const match = pathname.match(/\/stt:s:([^:]+):([^:]+)(.*?)$/);
+	if (!match) return null;
+	
+	const [refHost, refPath] = [...match].slice(1);
+	const ref = `https://${refHost}/${decodeURIComponent(refPath)}`;
+	
+	const id = await fetchRemoteStatusOnServer(hostname, ref);
+	if (!id) return null;
+	
+	return `https://${hostname}/${pathname.split('/')[1]}/${id}`;
+	
+};
+
+browser.webNavigation.onCompleted.addListener(
+	async details => {
+		
+		const { tabId, url } = details;
+		
+		if (!tabId || handlingTabs.has(tabId) || !url) return;
+		handlingTabs.add(tabId);
+		
+		console.log('tab onCompleted', tabId, url);
+		
+		const redir = await getRedirFromNav(url);
+		if (redir) {
+			console.log('redir', redir);
+			await browser.tabs.update(tabId, {
+				url: redir,
+				loadReplace: true,
+			});
+		}
+		
+		setTimeout(() => handlingTabs.delete(tabId), 5_000);
+		
 	},
 	{
 		url: [{
 			pathPrefix: '/@',
-			pathContains: '/stt:s:',
+			pathContains: '/stt:s',
 		}],
+	}
+);
+
+browser.webNavigation.onHistoryStateUpdated.addListener(
+	async details => {
+		
+		const { tabId, url } = details;
+		
+		if (!tabId || handlingTabs.has(tabId) || !url) return;
+		handlingTabs.add(tabId);
+		
+		console.log('tab onHistoryStateUpdated', tabId, url);
+		
+		const redir = await getRedirFromNav(url);
+		if (redir) {
+			console.log('redir', redir);
+			await browser.scripting.executeScript({
+				target: { tabId },
+				injectImmediately: true,
+				args: [url, redir],
+				func: ((url: string, redir: string) => {
+					if (location.href == url) history.replaceState(null, '', redir);
+				}) as any,
+			});
+		}
+		
+		setTimeout(() => handlingTabs.delete(tabId), 5_000);
+		
 	},
+	{
+		url: [{
+			pathPrefix: '/@',
+			pathContains: '/stt:s',
+		}],
+	}
 );
