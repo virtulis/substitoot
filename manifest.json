@@ -1,5 +1,5 @@
 {
-	"description": "Intercepts Mastodon API requests and appends any missing replies directly from the source server.",
+	"description": "Loads missing replies to boosted toots directly from the source server.",
 	"manifest_version": 2,
 	"name": "Substitoot — a transparent toot fetcher",
 	"short_name": "Substitoot",
