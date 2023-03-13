@@ -4,14 +4,7 @@ A Firefox extension that loads *all* replies to toots from remote instances.
 
 ## Installation
 
-Since there is no Mozilla-signed extension available yet, you can do the hacker thing:
-
-1. [Download the latest release .zip](https://github.com/virtulis/substitoot/releases).
-2. Go to `about:debugging`.
-3. Click "Load temporary addon" and select the zip file.
-4. Go to `about:addons` and configure your home instance.
-
-Note: various caching/bypass options are not yet implemented.
+Install the latest release from [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/substitoot/).
 
 ## TODO
 
@@ -51,4 +44,10 @@ If you click on a toot with a fake ID, the extension will try to intercept it an
 
 ## Development
 
-Run `pnpm watch` in one terminal and `web-ext run` in another. Refer to [web-ext docs](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/).
+[Trying it out — Mozilla.](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Your_first_WebExtension#trying_it_out)
+
+The extension is written in TypeScript and needs compiling and bundling.
+
+Run `pnpm watch` in one terminal and `web-ext run` in another.
+
+Refer to [web-ext docs](https://extensionworkshop.com/documentation/develop/getting-started-with-web-ext/).
