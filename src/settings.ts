@@ -1,21 +1,23 @@
 export interface Settings {
 	
 	instances: string[];
-	skip_instances: string[];
+	skipInstances: string[];
 	
-	cache_content_mins: number;
+	cacheContentMins: number;
 	
-	preload_home: boolean;
-	bypass_followed: boolean;
+	preloadHome: boolean;
+	bypassFollowed: boolean;
 	
 }
 
 export const defaultSettings: Settings = {
+
 	instances: [],
-	skip_instances: [],
-	cache_content_mins: 30,
-	bypass_followed: true,
-	preload_home: false,
+	skipInstances: [],
+	cacheContentMins: 30,
+	bypassFollowed: true,
+	preloadHome: false,
+	
 };
 let settings = defaultSettings;
 

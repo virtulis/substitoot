@@ -14,15 +14,15 @@ Object.values(inputs).forEach(el => {
 });
 
 function updateUI() {
-	for (const key of ['instances', 'skip_instances'] as const) {
+	for (const key of ['instances', 'skipInstances'] as const) {
 		if (focused == inputs[key]) continue;
 		inputs[key].value = settings[key].join(', ');
 	}
-	for (const key of ['cache_content_mins'] as const) {
+	for (const key of ['cacheContentMins'] as const) {
 		if (focused == inputs[key]) continue;
 		inputs[key].value = String(settings[key]);
 	}
-	for (const key of ['bypass_followed', 'preload_home'] as const) {
+	for (const key of ['bypassFollowed', 'preloadHome'] as const) {
 		inputs[key].checked = settings[key];
 	}
 }
@@ -54,7 +54,7 @@ async function requestPermissions() {
 	await checkPermissions();
 }
 
-for (const key of ['instances', 'skip_instances'] as const) {
+for (const key of ['instances', 'skipInstances'] as const) {
 	inputs[key].addEventListener('change', () => {
 		settings[key] = inputs[key].value.split(',').map(
 			val => val.trim().replace(/^\w*:\/\//g, '').replace(/\/.*$/g, '')
@@ -63,7 +63,7 @@ for (const key of ['instances', 'skip_instances'] as const) {
 		if (key == 'instances') requestPermissions();
 	});
 }
-for (const key of ['cache_content_mins'] as const) {
+for (const key of ['cacheContentMins'] as const) {
 	inputs[key].addEventListener('input', () => {
 		const num = Number(inputs[key].value);
 		if (!isFinite(num)) return;
@@ -71,14 +71,14 @@ for (const key of ['cache_content_mins'] as const) {
 		save();
 	});
 }
-for (const key of ['bypass_followed', 'preload_home'] as const) {
+for (const key of ['bypassFollowed', 'preloadHome'] as const) {
 	inputs[key].addEventListener('change', () => {
 		settings[key] = inputs[key].checked;
 		save();
 	});
 }
 
-document.getElementById('fix_permissions')!.addEventListener('click', requestPermissions);
+document.getElementById('fixPermissions')!.addEventListener('click', requestPermissions);
 
 browser.storage.sync.onChanged.addListener(load);
 browser.permissions.onAdded.addListener(checkPermissions);
