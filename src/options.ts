@@ -39,13 +39,19 @@ async function save() {
 	await checkPermissions();
 }
 
+let requestingPermissions = false;
+
 async function checkPermissions() {
+	if (!settings.instances.length || requestingPermissions) return;
 	const havePerm = await browser.permissions.contains(computePermissions(settings.instances));
 	document.getElementById('fix_ctor')!.classList.toggle('visible', !havePerm);
 }
 
-function requestPermissions() {
-	browser.permissions.request(computePermissions(settings.instances));
+async function requestPermissions() {
+	requestingPermissions = true;
+	await browser.permissions.request(computePermissions(settings.instances)).catch(e => console.error(e));
+	requestingPermissions = false;
+	await checkPermissions();
 }
 
 for (const key of ['instances', 'skip_instances'] as const) {
