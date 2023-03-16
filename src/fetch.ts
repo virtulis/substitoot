@@ -1,6 +1,6 @@
-import { remoteToLocalCache } from './remapping';
-import { doFetch, requestsInProgress } from './requests';
-import { StatusInfoRecord } from './types';
+import { remoteToLocalCache } from './remapping.js';
+import { doFetch, requestsInProgress } from './requests.js';
+import { StatusInfoRecord } from './types.js';
 
 export const statusInfoCache = new Map<string, StatusInfoRecord | Promise<StatusInfoRecord>>();
 export const statusInfoAwaiters = new Map<string, Array<(s: StatusInfoRecord) => void>>();

@@ -12,7 +12,7 @@ import {
 import { ContextResponse, Status, StatusInfoRecord } from './types.js';
 import { fetchRemoteStatusOnServer, getStatusRecord, statusInfoAwaiters, statusInfoCache } from './fetch.js';
 import { getRedirFromNav, mergeContextResponses } from './remapping.js';
-import { computePermissions, getSettings } from './settings';
+import { computePermissions, getSettings } from './settings.js';
 
 const handlingTabs = new Set<number>();
 const maybeFetchAndRedirect = async (details: RequestDetails): Promise<BlockingResponse | null> => {

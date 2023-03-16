@@ -1,4 +1,4 @@
-import { computePermissions, defaultSettings, Settings } from './settings';
+import { computePermissions, defaultSettings, Settings } from './settings.js';
 
 let settings = defaultSettings;
 const keys = Object.keys(settings) as Array<keyof Settings>;

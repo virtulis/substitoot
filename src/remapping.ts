@@ -1,7 +1,7 @@
 import * as DOMPurify from 'dompurify';
 import { Account, ContextResponse, Status, StatusInfoRecord } from './types.js';
 
-import { fetchRemoteStatusOnServer } from './fetch';
+import { fetchRemoteStatusOnServer } from './fetch.js';
 
 export const contextLists = ['ancestors', 'descendants'] as const;
 export const remapIdFields = ['in_reply_to_id', 'in_reply_to_account_id'] as const;
