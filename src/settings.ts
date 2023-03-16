@@ -46,11 +46,15 @@ export function computePermissions(instances: string[]): browser.permissions.Per
 	return {
 		origins: instances.map(host => `https://${host}/*`),
 		permissions: [
+			
 			'webRequest',
 			'webRequestBlocking',
-			'webRequestFilterResponse',
 			'webNavigation',
 			'scripting',
+			
+			// Required in Manifest V3 but errors out in V2 in older versions
+			// 'webRequestFilterResponse',
+			
 		],
 	};
 }

@@ -15,7 +15,6 @@
 	"optional_permissions": [
 		"webRequest",
 		"webRequestBlocking",
-		"webRequestFilterResponse",
 		"webNavigation",
 		"scripting",
 		"https://*/*"
