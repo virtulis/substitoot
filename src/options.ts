@@ -1,4 +1,5 @@
 import { computePermissions, defaultSettings, Settings } from './settings.js';
+import { reportAndNull } from './util.js';
 
 let settings = defaultSettings;
 const keys = Object.keys(settings) as Array<keyof Settings>;
@@ -49,7 +50,7 @@ async function checkPermissions() {
 
 async function requestPermissions() {
 	requestingPermissions = true;
-	await browser.permissions.request(computePermissions(settings.instances)).catch(e => console.error(e));
+	await browser.permissions.request(computePermissions(settings.instances)).catch(reportAndNull);
 	requestingPermissions = false;
 	await checkPermissions();
 }

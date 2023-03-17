@@ -299,10 +299,7 @@ export async function provideMapping(known: MappingData, timeout = getSettings()
 			if (!status) return null;
 			return await processStatusJSON(localHost, status);
 		})
-		.catch(e => {
-			console.error(e);
-			return null;
-		});
+		.catch(reportAndNull);
 	
 	return await addActiveStatusRequest(key, promise, timeout);
 	

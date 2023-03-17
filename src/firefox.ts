@@ -1,6 +1,7 @@
 import { beforeRequestListener, getWebRequestFilter, requestUrlDeleter } from './requests.js';
 import { getRedirFromNav } from './remapping.js';
 import { computePermissions, getSettings } from './settings.js';
+import { reportAndNull } from './util.js';
 
 const handlingTabs = new Set<number>();
 
@@ -43,7 +44,7 @@ const historyListener = async (details: browser.webNavigation._OnHistoryStateUpd
 			func: ((url: string, redir: string) => {
 				if (location.href == url) history.replaceState(null, '', redir);
 			}) as any,
-		}).catch(e => console.error(e));
+		}).catch(reportAndNull);
 		console.log('inject res', res);
 	}
 	
