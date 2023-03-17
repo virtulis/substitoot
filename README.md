@@ -25,7 +25,7 @@ If a remote response is successfully received, it appends any toots that are mis
 
 If you click on a toot with a fake ID, the extension will try to intercept it and fetch the toot properly this time (via your instance's search function). This only works if you are logged in.
 
-**Warning:** toot content is returned from the API calls as HTML code. Content of remote toots is passed through an HTML sanitizer in hopes that this will prevent any potential XSS *(in case someone really hates this extension!)*. This certainly needs a closer look (e.g. what other fields can have HTML).
+Toot content is returned from the API calls as HTML code. Content of remote toots is passed through an HTML sanitizer in hopes that this will prevent any potential XSS *(in case someone really hates this extension!)*.
 
 ### Why it works like that
 
