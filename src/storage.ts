@@ -1,5 +1,5 @@
-import { DBSchema, IDBPDatabase, openDB } from 'idb';
-import { StatusMapping } from './types.js';
+import { DBSchema, IDBPDatabase, openDB } from 'idb/with-async-ittr';
+import { ContextResponse, StatusMapping } from './types.js';
 
 export interface Storage extends DBSchema {
 	localStatusMapping: {
@@ -10,15 +10,24 @@ export interface Storage extends DBSchema {
 		key: string;
 		value: StatusMapping;
 	};
+	remoteContextCache: {
+		key: string;
+		value: {
+			key: string;
+			fetched: number;
+			context: ContextResponse;
+		};
+	};
 }
 
 let db: IDBPDatabase<Storage>;
 
 export async function initStorage() {
-	db = await openDB<Storage>('substitoot', 3_00_00, {
+	db = await openDB<Storage>('substitoot', 3_00_01, {
 		upgrade: (db, v) => {
 			if (v < 3_00_00) db.createObjectStore('localStatusMapping', { keyPath: 'localReference' } );
 			if (v < 3_00_00) db.createObjectStore('remoteStatusMapping', { keyPath: 'remoteReference' } );
+			if (v < 3_00_01) db.createObjectStore('remoteContextCache', { keyPath: 'key' } );
 		},
 	});
 }

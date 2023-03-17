@@ -9,6 +9,7 @@ export interface Settings {
 	bypassFollowed: boolean;
 	
 	statusRequestTimeout: number;
+	contextRequestTimeout: number;
 	searchTimeout: number;
 	
 }
@@ -22,6 +23,7 @@ export const defaultSettings: Settings = {
 	preloadHome: false,
 	
 	statusRequestTimeout: 1_000,
+	contextRequestTimeout: 2_000,
 	searchTimeout: 3_000,
 	
 };

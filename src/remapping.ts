@@ -254,16 +254,58 @@ export async function fetchStatus(hostname: string, id: string) {
 	);
 }
 
+const activeContextRequests = new Map<string, Promise<Maybe<ContextResponse>>>();
+let contextCacheCleared = 0;
+
+export async function maybeClearContextCache() {
+	const now = Date.now();
+	if (now - contextCacheCleared < 60_000) return;
+	contextCacheCleared = now;
+	const thresh = now - getSettings().cacheContentMins * 60_000;
+	const tx = getStorage().transaction('remoteContextCache', 'readwrite');
+	for await (const rec of tx.store) {
+		if (rec.value.fetched > thresh) continue;
+		console.log('delete context cache', rec.key);
+		await rec.delete();
+	}
+}
+
 export async function fetchContext(mapping: RemoteMapping) {
-	// TODO cache
+	
 	if (!mapping.remoteId.match(/^\d+$/)) return null; // not Mastodon
-	const remoteUrl = `https://${mapping.remoteHost}/api/v1/statuses/${mapping.remoteId}/context`;
-	console.log('fetch', remoteUrl);
-	const res = await callApi(remoteUrl);
-	if (!res.ok) return null;
-	const json = await res.json().catch(() => null);
-	if (!json || !Array.isArray(json.ancestors) || !Array.isArray(json.descendants)) return null;
-	return json as ContextResponse;
+	const url = `https://${mapping.remoteHost}/api/v1/statuses/${mapping.remoteId}/context`;
+	const key = `${mapping.remoteHost}:${mapping.remoteId}`;
+	
+	const now = Date.now();
+	const ttl = getSettings().cacheContentMins * 60_000;
+	const cached = await getStorage().get('remoteContextCache', key);
+	if (cached && now - cached.fetched < ttl) return cached.context;
+	
+	if (activeContextRequests.has(key)) return await activeContextRequests.get(key) as ContextResponse;
+	
+	const promise = Promise.race([
+		(async () => {
+			console.log('fetch', url);
+			const res = await callApi(url);
+			if (!res.ok) return null;
+			const json = await res.json().catch(() => null);
+			if (!json || !Array.isArray(json.ancestors) || !Array.isArray(json.descendants)) return null;
+			await getStorage().put('remoteContextCache', {
+				key,
+				fetched: now,
+				context: json,
+			});
+			return json as ContextResponse;
+		})(),
+		sleep(getSettings().contextRequestTimeout),
+	]).finally(() => {
+		activeContextRequests.delete(key);
+		maybeClearContextCache().catch(reportAndNull);
+	});
+	activeContextRequests.set(key, promise);
+	
+	return await promise;
+	
 }
 
 export async function provideMapping(known: MappingData, timeout = getSettings().searchTimeout): Promise<StatusResult> {
