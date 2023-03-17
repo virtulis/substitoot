@@ -57,6 +57,9 @@
 			margin: 16px;
 			outline-offset: 14px;
 		}
+		.hidden {
+			display: none;
+		}
 	</style>
 </head>
 <body>
@@ -76,7 +79,7 @@
 	<span>minutes.</span>
 	<small>(zero disables caching)</small>
 </div>
-<div class="checkbox">
+<div class="checkbox hidden">
 	<input disabled type="checkbox" id="bypassFollowed"/>
 	<label for="bypassFollowed">
 		Bypass any remote toots by followed users<br/>
@@ -86,12 +89,12 @@
 		Mastodon <em>should</em> already have up-to-date replies.
 	</small>
 </div>
-<div class="checkbox">
+<div class="checkbox hidden">
 	<input disabled type="checkbox" id="preloadHome"/>
 	<label for="preloadHome">Preload context in advance for boosted toots in your timeline</label>
 </div>
 <div class="column">
-	<h4><label for="skipInstances">Fisable for instances:</label></h4>
+	<h4><label for="skipInstances">Disable for instances:</label></h4>
 	<div>Comma-separated list of domain names that the extension should not try to fetch statuses from. Will still include them if found elsewhere.</div>
 	<input id="skipInstances" placeholder="kludge.guru, ..."/>
 </div>
