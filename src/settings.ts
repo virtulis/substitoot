@@ -8,6 +8,9 @@ export interface Settings {
 	preloadHome: boolean;
 	bypassFollowed: boolean;
 	
+	statusRequestTimeout: number;
+	searchTimeout: number;
+	
 }
 
 export const defaultSettings: Settings = {
@@ -17,6 +20,9 @@ export const defaultSettings: Settings = {
 	cacheContentMins: 30,
 	bypassFollowed: true,
 	preloadHome: false,
+	
+	statusRequestTimeout: 1_000,
+	searchTimeout: 3_000,
 	
 };
 let settings = defaultSettings;

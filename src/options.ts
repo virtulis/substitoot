@@ -5,7 +5,7 @@ const keys = Object.keys(settings) as Array<keyof Settings>;
 const inputs = Object.fromEntries(keys.map(k => [
 	k,
 	document.getElementById(k),
-])) as Record<keyof Settings, HTMLInputElement>;
+]).filter(e => e[1])) as Record<keyof Settings, HTMLInputElement>;
 
 let focused: HTMLInputElement | null = null;
 Object.values(inputs).forEach(el => {
@@ -44,7 +44,7 @@ let requestingPermissions = false;
 async function checkPermissions() {
 	if (!settings.instances.length || requestingPermissions) return;
 	const havePerm = await browser.permissions.contains(computePermissions(settings.instances));
-	document.getElementById('fix_ctor')!.classList.toggle('visible', !havePerm);
+	document.getElementById('fixCtor')!.classList.toggle('visible', !havePerm);
 }
 
 async function requestPermissions() {

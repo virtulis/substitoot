@@ -1,6 +1,10 @@
 import { updateFirefoxEventHandlers } from './firefox.js';
 import { initSettings } from './settings.js';
+import { initStorage } from './storage.js';
 
-initSettings(updateFirefoxEventHandlers).catch(e => {
-	console.error(e);
-});
+async function init() {
+	await initStorage();
+	await initSettings(updateFirefoxEventHandlers);
+}
+
+init().catch(e => console.error(e));
