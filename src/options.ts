@@ -57,7 +57,7 @@ async function requestPermissions() {
 for (const key of ['instances', 'skipInstances'] as const) {
 	inputs[key].addEventListener('change', () => {
 		settings[key] = inputs[key].value.split(',').map(
-			val => val.trim().replace(/^\w*:\/\//g, '').replace(/\/.*$/g, '')
+			val => val.trim().replace(/^\w*:\/\//g, '').replace(/\/.*$/g, '').toLowerCase()
 		).filter(val => !!val);
 		save();
 		if (key == 'instances') requestPermissions();
