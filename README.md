@@ -8,8 +8,6 @@ Install the latest release from [addons.mozilla.org](https://addons.mozilla.org/
 
 ## TODO
 
-- Signed Mozilla extension.
-- Cache remote content.
 - Bypass remote toots by followed users (unless you followed them after that toot).
 - Load old toots in user profiles.
 - Preload context in advance for boosted toots in your timeline.
@@ -32,7 +30,6 @@ Toot content is returned from the API calls as HTML code. Content of remote toot
 * Should hopefully work with all modern Mastodon versions/forks. Could even be somewhat usable on instances you're not logged in to.
 * Does not inject any scripts at all (except for a `history.replaceState` call on navigation) and does not rely on DOM events.
 * Serves as a demo of what Mastodon should just be doing out of the box, seriously.
-* Well I already wrote it, so might as well release and see how it goes.
 
 ## Building
 	
