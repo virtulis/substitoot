@@ -272,7 +272,9 @@ export async function maybeClearContextCache() {
 
 export async function fetchContext(mapping: RemoteMapping) {
 	
+	if (getSettings().skipInstances.includes(mapping.remoteHost)) return null;
 	if (!mapping.remoteId.match(/^\d+$/)) return null; // not Mastodon
+	
 	const url = `https://${mapping.remoteHost}/api/v1/statuses/${mapping.remoteId}/context`;
 	const key = `${mapping.remoteHost}:${mapping.remoteId}`;
 	

@@ -1,6 +1,6 @@
 import { ContextResponse, isLocalMapping, isRemoteMapping, Maybe } from './types.js';
 import { ownRequests } from './fetch.js';
-import { Settings } from './settings.js';
+import { getSettings, Settings } from './settings.js';
 import {
 	fetchContext,
 	fetchStatus,
@@ -126,17 +126,23 @@ const statusContextHandler: FilterHandler = async details => {
 	
 	// do we already know the remote id?
 	if (isRemoteMapping(mapping)) {
+		
+		if (getSettings().skipInstances.includes(mapping.remoteHost)) return {};
+	
 		remoteReq = fetchContext(mapping);
+		
 		// client is trying to fetch context for a fake id (or our db is screwed up)
 		if (!isLocalMapping(mapping)) {
 			console.log('fix mapping', mapping);
 			mapping = await provideMapping(mapping).then(res => res?.mapping);
 		}
+		
 		// requested via fake id, redirect, keep remoteReq dangling (it will be reused)
 		if (isLocalMapping(mapping) && !isLocalMapping(parsed)) {
 			console.log('redir context', mapping);
 			return { redirectUrl: `https://${localHost}/api/v1/statuses/${mapping.localId}/context` };
 		}
+		
 	}
 	
 	// then do we at least know the local id?
