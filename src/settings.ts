@@ -54,7 +54,7 @@ export async function initSettings(onChange: () => any) {
 
 export function computePermissions(instances: string[]): browser.permissions.Permissions {
 	return {
-		origins: instances.map(host => `https://${host}/*`),
+		// instances.map(host => `https://${host}/*`),
 		permissions: [
 			
 			'webRequest',

@@ -1,6 +1,6 @@
 import { beforeRequestListener, getWebRequestFilter, requestUrlDeleter } from './requests.js';
 import { getRedirFromNav } from './remapping.js';
-import { computePermissions, getSettings } from './settings.js';
+import { getSettings } from './settings.js';
 import { reportAndNull } from './util.js';
 
 const handlingTabs = new Set<number>();
@@ -56,14 +56,22 @@ let settingsOpenedOnce = false;
 
 export async function updateFirefoxEventHandlers() {
 	
+	const { webNavigation, webRequest } = browser;
+	if (!webRequest || !webNavigation) {
+		console.error('permissions broken');
+		if (!settingsOpenedOnce) await browser.runtime.openOptionsPage();
+		settingsOpenedOnce = true;
+		return;
+	}
+	
 	const settings = getSettings();
 	
-	browser.webRequest?.onBeforeRequest.removeListener(beforeRequestListener);
-	browser.webRequest?.onCompleted.removeListener(requestUrlDeleter);
-	browser.webRequest?.onErrorOccurred.removeListener(requestUrlDeleter);
+	webRequest.onBeforeRequest.removeListener(beforeRequestListener);
+	webRequest.onCompleted.removeListener(requestUrlDeleter);
+	webRequest.onErrorOccurred.removeListener(requestUrlDeleter);
 	
-	browser.webNavigation?.onCompleted.removeListener(navigationListener);
-	browser.webNavigation?.onHistoryStateUpdated.removeListener(historyListener);
+	webNavigation.onCompleted.removeListener(navigationListener);
+	webNavigation.onHistoryStateUpdated.removeListener(historyListener);
 	
 	if (!settings.instances.length) {
 		console.log('no instances configured, disable');
@@ -72,28 +80,21 @@ export async function updateFirefoxEventHandlers() {
 		return;
 	}
 	
-	if (!await browser.permissions.contains(computePermissions(settings.instances))) {
-		console.log('permissions broken');
-		if (!settingsOpenedOnce) await browser.runtime.openOptionsPage();
-		settingsOpenedOnce = true;
-		return;
-	}
-	
 	const filter = getWebRequestFilter(settings);
 	
-	browser.webRequest.onBeforeRequest.addListener(beforeRequestListener, filter, ['blocking', 'requestBody']);
+	webRequest.onBeforeRequest.addListener(beforeRequestListener, filter, ['blocking', 'requestBody']);
 	
-	browser.webRequest.onCompleted.addListener(requestUrlDeleter, filter);
-	browser.webRequest.onErrorOccurred.addListener(requestUrlDeleter, filter);
+	webRequest.onCompleted.addListener(requestUrlDeleter, filter);
+	webRequest.onErrorOccurred.addListener(requestUrlDeleter, filter);
 	
-	browser.webNavigation.onCompleted.addListener(navigationListener, {
+	webNavigation.onCompleted.addListener(navigationListener, {
 		url: settings.instances.map(host => ({
 			hostEquals: host,
 			pathPrefix: '/@',
 			pathContains: '/s:',
 		})),
 	});
-	browser.webNavigation.onHistoryStateUpdated.addListener(historyListener, {
+	webNavigation.onHistoryStateUpdated.addListener(historyListener, {
 		url: settings.instances.map(host => ({
 			hostEquals: host,
 			pathPrefix: '/@',
