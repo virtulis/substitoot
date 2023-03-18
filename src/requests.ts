@@ -154,8 +154,6 @@ const statusContextHandler: FilterHandler = async details => {
 	if (!isRemoteMapping(mapping)) return {};
 	const remoteMapping = mapping;
 	
-	console.log({ remoteMapping });
-	
 	return wrapRewriter(details, async (localResponse: ContextResponse) => {
 	
 		const remoteResponse = await remoteReq;
@@ -172,6 +170,25 @@ const statusContextHandler: FilterHandler = async details => {
 	
 };
 
+const statusActionHandler: FilterHandler = async details => {
+	
+	const { localHost, parsed, rest } = parseStatusApiUrl(details.url);
+	if (!parsed) return {};
+	
+	// If this is a request for a fake status ID, attempt to substitute a real one.
+	if (!isLocalMapping(parsed)) {
+		console.log('fix action', details.url);
+		const result = await provideMapping(parsed);
+		if (!result?.mapping.localId) return {};
+		const redirectUrl = `https://${localHost}/api/v1/statuses/${result?.mapping.localId}/${rest.join('/')}`;
+		console.log('redir action to', redirectUrl);
+		return { redirectUrl };
+	}
+	
+	return {};
+	
+};
+
 const matches: Array<{
 	match: string[];
 	handler: FilterHandler;
@@ -183,6 +200,10 @@ const matches: Array<{
 	{
 		match: ['statuses', '*', 'context'],
 		handler: statusContextHandler,
+	},
+	{
+		match: ['statuses', '*', '*'],
+		handler: statusActionHandler,
 	},
 ];
 
