@@ -163,7 +163,6 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 			uri: status.uri,
 			remoteHost,
 			remoteId,
-			remoteReference,
 			username: status.account?.username,
 		};
 		const remoteLocalReference = `${remoteHost}:${remoteId}`;
@@ -172,12 +171,14 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 			localHost: remoteHost,
 			localId: remoteId,
 			localReference: remoteLocalReference,
+			remoteReference: null,
 		});
 		if (!await remoteStore.count(remoteReference)) await remoteStore.put({
 			...common,
 			localHost,
 			localId: null,
 			localReference: null,
+			remoteReference,
 		});
 		
 		const accKey = account?.url;
