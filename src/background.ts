@@ -1,11 +1,15 @@
 import { updateFirefoxEventHandlers } from './firefox.js';
 import { initSettings } from './settings.js';
 import { initStorage } from './storage.js';
-import { reportAndNull } from './util.js';
 
+let initRun = false;
 async function init() {
+	if (initRun) return;
+	initRun = true;
+	console.log('init');
 	await initStorage();
 	await initSettings(updateFirefoxEventHandlers);
 }
 
-init().catch(reportAndNull);
+browser.runtime.onStartup.addListener(init);
+browser.runtime.onInstalled.addListener(init);
