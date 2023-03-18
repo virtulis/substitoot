@@ -81,6 +81,9 @@ for (const key of ['bypassFollowed', 'preloadHome'] as const) {
 
 document.getElementById('fixPermissions')!.addEventListener('click', requestPermissions);
 
+document.getElementById('clearCache')!.addEventListener('click', () => browser.runtime.sendMessage({ command: 'clearCache' }));
+document.getElementById('clearMetadata')!.addEventListener('click', () => browser.runtime.sendMessage({ command: 'clearMetadata' }));
+
 browser.storage.sync.onChanged.addListener(load);
 browser.permissions.onAdded.addListener(checkPermissions);
 browser.permissions.onRemoved.addListener(checkPermissions);

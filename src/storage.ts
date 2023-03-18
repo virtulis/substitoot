@@ -35,3 +35,15 @@ export async function initStorage() {
 export function getStorage() {
 	return db;
 }
+
+export async function clearCache() {
+	await db.clear('remoteContextCache');
+}
+
+export async function clearMetadata() {
+	await Promise.all(([
+		'localStatusMapping',
+		'remoteStatusMapping',
+		'remoteContextCache',
+	] as const).map(s => db.clear(s)));
+}
