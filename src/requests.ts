@@ -90,7 +90,7 @@ function parseStatusApiUrl(url: string) {
 const statusRequestHandler: FilterHandler = async details => {
 	
 	const { localHost, parsed } = parseStatusApiUrl(details.url);
-	if (!parsed) return {};
+	if (!parsed || details.method != 'GET') return {};
 	
 	// If this is a request for a remote status, attempt to substitute a local one.
 	// TODO Does this even happen?
