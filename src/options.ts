@@ -61,7 +61,8 @@ for (const key of ['instances', 'skipInstances'] as const) {
 			val => val.trim().replace(/^\w*:\/\//g, '').replace(/\/.*$/g, '').toLowerCase()
 		).filter(val => !!val);
 		save();
-		if (key == 'instances') requestPermissions();
+		// Not using optional permissions for now, hopefully temporary
+		// if (key == 'instances') requestPermissions();
 	});
 }
 for (const key of ['cacheContentMins'] as const) {
