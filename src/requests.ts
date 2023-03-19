@@ -183,7 +183,7 @@ const statusActionHandler: FilterHandler = async details => {
 		console.log('fix action', details.url);
 		const result = await provideMapping(parsed);
 		if (!result?.mapping.localId) return {};
-		const redirectUrl = `https://${localHost}/${prefix.join('/')}}/${result?.mapping.localId}/${rest.join('/')}`;
+		const redirectUrl = `https://${localHost}/${prefix.join('/')}/${result?.mapping.localId}/${rest.join('/')}`;
 		console.log('redir action to', redirectUrl);
 		return { redirectUrl };
 	}
