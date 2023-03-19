@@ -8,6 +8,7 @@ import {
 	isLocalMapping,
 	isRemoteMapping,
 	LocalMapping,
+	Mapping,
 	MappingData,
 	Maybe,
 	RemoteMapping,
@@ -24,8 +25,9 @@ export const contextLists = ['ancestors', 'descendants'] as const;
 export const remapIdFields = ['in_reply_to_id', 'in_reply_to_account_id'] as const;
 export const remoteToLocalCache = new Map<string, string | null | Promise<string | null>>();
 
-export function parseId(localHost: string, id: string): MappingData {
+export function parseId(localHost: string, id: string): Maybe<MappingData> {
 	const match = id.match(/^s:(.):([^:/]+):([^:/]+)$/);
+	if (!match && !id.match(/^\d+$/)) return null;
 	if (!match) return {
 		localHost,
 		localId: id,
@@ -37,7 +39,7 @@ export function parseId(localHost: string, id: string): MappingData {
 		localHost,
 		localId: null,
 		remoteHost: match[2],
-		remoteId: match[3],
+		remoteId: decodeURIComponent(match[3]),
 	};
 }
 
@@ -217,11 +219,9 @@ export type StatusResult = Maybe<{
 	status: Maybe<Status>;
 }>;
 
-/**
- * Active requests to fetch status mappings (in various ways)
- * Key: localHost:localId or localHost:remoteHost:remoteId
- */
+// TODO it's probably a good idea to DRY this pattern
 const activeStatusRequests = new Map<string, Promise<StatusResult>>();
+const activeAccountRequests = new Map<string, Promise<Maybe<Mapping>>>();
 
 export function getActiveStatusRequest(key: string): Maybe<Promise<StatusResult>> {
 	return activeStatusRequests.get(key);
@@ -370,6 +370,75 @@ export async function provideMapping(known: MappingData, timeout = getSettings()
 	
 }
 
+async function fetchAccount(known: RemoteMapping) {
+	
+	const { localHost, remoteHost, remoteId } = known;
+	
+	const lookupRes = await callApi(`https://${localHost}/api/v1/accounts/lookup?acct=${remoteId}@${remoteHost}`).catch(reportAndNull);
+	if (!lookupRes) return null;
+	
+	if (lookupRes.ok) {
+		const lookupJson = await lookupRes.json() as Account;
+		const mapping: Mapping = {
+			type: 'a',
+			localHost,
+			localId: lookupJson.id,
+			remoteHost,
+			remoteId,
+			localReference: `${localHost}:${lookupJson.id}`,
+			remoteReference: `${localHost}:${remoteHost}:${remoteId}`,
+		};
+		await getStorage().put('remoteAccountMapping', mapping);
+		return mapping;
+	}
+	
+	const searchRes = await callApi(`https://${localHost}/api/v2/search?q=${remoteId}@${remoteHost}&resolve=true&limit=1&type=accounts`).catch(reportAndNull);
+	if (!searchRes || !searchRes.ok) return null;
+	
+	const json = await searchRes.json();
+	const account = json.accounts?.[0] as Account;
+	if (!account) return null;
+	
+	const mapping: Mapping = {
+		type: 'a',
+		localHost,
+		localId: account.id,
+		remoteHost,
+		remoteId,
+		localReference: `${localHost}:${account.id}`,
+		remoteReference: `${localHost}:${remoteHost}:${remoteId}`,
+	};
+	await getStorage().put('remoteAccountMapping', mapping);
+	return mapping;
+
+}
+
+export async function provideAccountMapping(known: RemoteMapping, timeout = getSettings().searchTimeout): Promise<Maybe<Mapping>> {
+	
+	const { localHost, remoteHost, remoteId } = known;
+	const mapping = await getStorage().get('remoteAccountMapping', `${localHost}:${remoteHost}:${remoteId}`) as Maybe<RemoteMapping<Mapping>>;
+	console.log({ known, mapping });
+	
+	// by now we expect either a full mapping, or a remote mapping with username
+	if (mapping && isFullMapping(mapping)) return mapping;
+	// if (!isRemoteMapping(mapping)) return null;
+	
+	const key = `${known.localHost}:${known.remoteHost}:${known.remoteId}`;
+	const active = activeAccountRequests.get(key);
+	if (active) return await active;
+	
+	const promise: Promise<Maybe<Mapping>> = Promise.race([
+		fetchAccount(mapping ?? known),
+		sleep(timeout),
+	])
+		.catch(reportAndNull)
+		.finally(() => activeStatusRequests.delete(key));
+	activeAccountRequests.set(key, promise);
+	
+	return await promise;
+	
+}
+
 export async function getRedirFromNav(url: string) {
 	
 	const { hostname, pathname } = new URL(url);
@@ -377,7 +446,7 @@ export async function getRedirFromNav(url: string) {
 	if (!match) return null;
 	
 	const [before, id, after] = [...match].slice(1);
-	const { localHost, remoteHost, remoteId } = parseId(hostname, id);
+	const { localHost, remoteHost, remoteId } = parseId(hostname, id)!;
 	// console.log({ before, id, after, localHost, remoteHost, remoteId });
 	if (!remoteHost || !remoteId) return null;
 	

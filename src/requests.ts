@@ -9,8 +9,10 @@ import {
 	mergeContextResponses,
 	parseId,
 	processStatusJSON,
+	provideAccountMapping,
 	provideMapping,
 } from './remapping.js';
+import { sleep } from './util.js';
 
 type RequestDetails = browser.webRequest._OnBeforeRequestDetails;
 type BlockingResponse = browser.webRequest.BlockingResponse;
@@ -79,17 +81,18 @@ export function wrapRewriter(details: RequestDetails, rewriter: JSONRewriterFilt
 
 function parseStatusApiUrl(url: string) {
 	const { hostname: localHost, pathname } = new URL(url);
-	const parts = pathname.split('/').slice(3).filter(s => !!s);
-	const urlId = (parts[0] == 'statuses' && parts[1]);
+	const parts = pathname.split('/').filter(s => !!s);
+	const prefix = parts.slice(0, 3); // api/v1/statuses
+	const urlId = parts[3];
 	const parsed = urlId && parseId(localHost, urlId) || null;
-	// console.log('parsed', urlId, parsed);
-	const rest = parts.slice(2);
-	return { pathname, parts, urlId, parsed, localHost, rest };
+	const rest = parts.slice(4);
+	console.log('parsed', parts, prefix, urlId, rest, parsed);
+	return { pathname, prefix, parts, urlId, parsed, localHost, rest };
 }
 
 const statusRequestHandler: FilterHandler = async details => {
 	
-	const { localHost, parsed } = parseStatusApiUrl(details.url);
+	const { localHost, parsed, prefix } = parseStatusApiUrl(details.url);
 	if (!parsed || details.method != 'GET') return {};
 	
 	// If this is a request for a remote status, attempt to substitute a local one.
@@ -97,7 +100,7 @@ const statusRequestHandler: FilterHandler = async details => {
 	if (isRemoteMapping(parsed)) {
 		const result = await provideMapping(parsed);
 		if (!result?.mapping.localId) return {};
-		return { redirectUrl: `https://${localHost}/api/v1/statuses/${result?.mapping.localId}` };
+		return { redirectUrl: `https://${localHost}/${prefix.join('/')}/${result?.mapping.localId}` };
 	}
 	
 	const key = `${localHost}:${parsed.localId}`;
@@ -172,7 +175,7 @@ const statusContextHandler: FilterHandler = async details => {
 
 const statusActionHandler: FilterHandler = async details => {
 	
-	const { localHost, parsed, rest } = parseStatusApiUrl(details.url);
+	const { localHost, parsed, prefix, rest } = parseStatusApiUrl(details.url);
 	if (!parsed) return {};
 	
 	// If this is a request for a fake status ID, attempt to substitute a real one.
@@ -180,9 +183,64 @@ const statusActionHandler: FilterHandler = async details => {
 		console.log('fix action', details.url);
 		const result = await provideMapping(parsed);
 		if (!result?.mapping.localId) return {};
-		const redirectUrl = `https://${localHost}/api/v1/statuses/${result?.mapping.localId}/${rest.join('/')}`;
+		const redirectUrl = `https://${localHost}/${prefix.join('/')}}/${result?.mapping.localId}/${rest.join('/')}`;
 		console.log('redir action to', redirectUrl);
 		return { redirectUrl };
+	}
+	
+	return {};
+	
+};
+
+const accountActionHandler: FilterHandler = async details => {
+	
+	const url = new URL(details.url);
+	const { hostname: localHost, pathname, searchParams } = url;
+	
+	const parts = pathname.split('/').filter(s => !!s);
+	const prefix = parts.slice(0, 3); // api/v1/statuses
+	const urlId = parts[3];
+	const parsed = urlId && parseId(localHost, urlId) || null;
+	const rest = parts.slice(4);
+	
+	// if (!parsed || isLocalMapping(parsed) || !isRemoteMapping(parsed)) return {};
+	
+	if (parsed && isRemoteMapping(parsed)) {
+		
+		// If this is a request for a fake account ID, attempt to substitute a real one.
+		console.log('fix acct action', details.url);
+		
+		const result = await provideAccountMapping(parsed);
+		if (!result?.localId) {
+			await sleep(1000); // Mastodon web code does a stupid and keeps hammering when it gets a 404 on some account requests
+			return {};
+		}
+		
+		const redirectUrl = `https://${localHost}/${prefix.join('/')}/${result.localId}${rest.length ? '/' + rest.join('/') : ''}`;
+		console.log('redir action to', redirectUrl);
+		return { redirectUrl };
+		
+	}
+	
+	if (!parsed) {
+		
+		let modified = false;
+		for (const [key, value] of searchParams.entries()) {
+			if (!value.match(/^s:a:/)) continue;
+			const id = parseId(localHost, value);
+			if (!id || isLocalMapping(id) || !isRemoteMapping(id)) continue;
+			const result = await provideAccountMapping(id);
+			if (!result?.localId) continue;
+			searchParams.set(key, result.localId);
+			modified = true;
+		}
+		
+		if (modified) {
+			const redirectUrl = url.toString();
+			console.log('redir action qs to', redirectUrl);
+			return { redirectUrl };
+		}
+		
 	}
 	
 	return {};
@@ -204,6 +262,14 @@ const matches: Array<{
 	{
 		match: ['statuses', '*', '*'],
 		handler: statusActionHandler,
+	},
+	{
+		match: ['accounts', '*'],
+		handler: accountActionHandler,
+	},
+	{
+		match: ['accounts', '*', '*'],
+		handler: accountActionHandler,
 	},
 ];
 
