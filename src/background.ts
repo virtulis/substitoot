@@ -1,12 +1,13 @@
 import { updateFirefoxEventHandlers } from './firefox.js';
 import { initSettings } from './settings.js';
 import { clearCache, clearMetadata, initStorage } from './storage.js';
+import { packageVersion } from './util.js';
 
 let initRun = false;
 async function init() {
 	if (initRun) return;
 	initRun = true;
-	console.log('init');
+	console.log('init', packageVersion);
 	await initStorage();
 	await initSettings(updateFirefoxEventHandlers);
 }

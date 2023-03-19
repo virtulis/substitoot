@@ -1,3 +1,7 @@
+import { version } from '../package.json';
+
+export const packageVersion: string = version;
+
 export function sleep<T>(ms: number, value: T): Promise<T>;
 export function sleep(ms: number): Promise<null>;
 export function sleep(ms: number, value = null) {
