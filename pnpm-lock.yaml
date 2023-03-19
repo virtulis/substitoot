@@ -9,7 +9,9 @@ specifiers:
   esbuild: ^0.17.11
   eslint: ^8.36.0
   idb: ^7.1.1
+  marked: ^4.2.12
   murmurhash: ^2.0.1
+  sanitize.css: ^13.0.0
   typescript: ^4.9.5
 
 dependencies:
@@ -24,6 +26,8 @@ devDependencies:
   '@typescript-eslint/parser': 5.54.1_vgl77cfdswitgr47lm5swmv43m
   esbuild: 0.17.11
   eslint: 8.36.0
+  marked: 4.2.12
+  sanitize.css: 13.0.0
   typescript: 4.9.5
 
 packages:
@@ -971,6 +975,12 @@ packages:
       yallist: 4.0.0
     dev: true
 
+  /marked/4.2.12:
+    resolution: {integrity: sha512-yr8hSKa3Fv4D3jdZmtMMPghgVt6TWbk86WQaWhDloQjRSQhMMYCAro7jP7VDJrjjdV8pxVxMssXS8B8Y5DZ5aw==}
+    engines: {node: '>= 12'}
+    hasBin: true
+    dev: true
+
   /merge2/1.4.1:
     resolution: {integrity: sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==}
     engines: {node: '>= 8'}
@@ -1110,6 +1120,10 @@ packages:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
     dependencies:
       queue-microtask: 1.2.3
+    dev: true
+
+  /sanitize.css/13.0.0:
+    resolution: {integrity: sha512-ZRwKbh/eQ6w9vmTjkuG0Ioi3HBwPFce0O+v//ve+aOq1oeCy7jMV2qzzAlpsNuqpqCBjjriM1lbtZbF/Q8jVyA==}
     dev: true
 
   /semver/7.3.8:

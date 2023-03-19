@@ -4,7 +4,7 @@ A Firefox extension that loads *all* replies to toots from remote instances.
 
 ## Installation
 
-Install the latest release from [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/substitoot/).
+Install the latest release from [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/substitoot/).
 
 ## TODO
 

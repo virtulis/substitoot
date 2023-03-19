@@ -4,9 +4,14 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"build": "pnpm exec esbuild --bundle --outdir=dist src/background.ts src/options.ts",
-		"watch": "pnpm run build --watch",
-		"package": "web-ext build --ignore-files src *.iml tsconfig.json pnpm-lock.yaml"
+		"build": "pnpm run build-scripts && pnpm run esbuild",
+		"esbuild": "pnpm exec esbuild --bundle --outdir=dist src/background.ts src/options.ts",
+		"watch": "pnpm run esbuild --watch",
+		"render-readme": "cat README.md | grep -v '^# ' | pnpm exec marked > web/readme.html",
+		"build-scripts": "pnpm exec tsc -p scripts",
+		"update-web": "pnpm run render-readme && node scripts/update-web.js",
+		"build-web": "pnpm run build-scripts && cp node_modules/sanitize.css/sanitize.css web/ && pnpm run update-web",
+		"package": "pnpm run build && web-ext build --ignore-files src web *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml"
 	},
 	"devDependencies": {
 		"@types/firefox-webext-browser": "^111.0.0",
@@ -14,6 +19,8 @@
 		"@typescript-eslint/parser": "^5.54.1",
 		"esbuild": "^0.17.11",
 		"eslint": "^8.36.0",
+		"marked": "^4.2.12",
+		"sanitize.css": "^13.0.0",
 		"typescript": "^4.9.5"
 	},
 	"dependencies": {

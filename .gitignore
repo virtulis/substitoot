@@ -7,3 +7,9 @@ tsconfig.tsbuildinfo
 /.idea
 
 /web-ext-artifacts
+
+/scripts/*.js*
+
+/web/index.html
+/web/readme.html
+/web/sanitize.css

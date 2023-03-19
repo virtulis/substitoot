@@ -14,7 +14,8 @@ module.exports = {
 		sourceType: 'module',
 		tsconfigRootDir: __dirname,
 		project: [
-			`${__dirname}/tsconfig.json`
+			`${__dirname}/tsconfig.json`,
+			`${__dirname}/scripts/tsconfig.json`
 		],
 	},
 	plugins: [
@@ -25,7 +26,7 @@ module.exports = {
 		'**/*.d.ts',
 	],
 	rules: {
-	
+		
 		indent: ['error', 'tab', {
 			ignoredNodes: ['TemplateLiteral *'],
 			flatTernaryExpressions: true,
@@ -54,7 +55,7 @@ module.exports = {
 		
 		'array-callback-return': ['error'],
 		'dot-location': ['error', 'property'],
-		"@typescript-eslint/dot-notation": ["error"],
+		'@typescript-eslint/dot-notation': ['error'],
 		'no-else-return': ['error'],
 		'no-eq-null': ['error'],
 		'no-multi-spaces': ['error'],
@@ -113,11 +114,11 @@ module.exports = {
 		// curly: ['error', 'multi-line', 'consistent'],
 		
 	},
-	"overrides": [
+	'overrides': [
 		{
-			"files": ["*.spec.ts"],
-			"rules": {
-				"no-unused-expressions": "off"
+			'files': ['*.spec.ts'],
+			'rules': {
+				'no-unused-expressions': 'off'
 			}
 		}
 	]

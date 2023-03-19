@@ -5,11 +5,12 @@
 		"moduleResolution": "NodeNext",
 		"strict": true,
 		"sourceMap": true,
+		"noEmit": false,
 		"skipLibCheck": true,
 		"resolveJsonModule": true,
 		"incremental": true
 	},
 	"include": [
-		"./src/**/*.ts"
+		"./**/*.ts"
 	]
 }
