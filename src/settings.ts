@@ -24,7 +24,7 @@ export const defaultSettings: Settings = {
 	
 	statusRequestTimeout: 1_000,
 	contextRequestTimeout: 2_000,
-	searchTimeout: 3_000,
+	searchTimeout: 10_000,
 	
 };
 let settings = defaultSettings;
