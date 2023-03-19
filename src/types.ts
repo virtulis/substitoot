@@ -65,3 +65,16 @@ export interface ContextResponse {
 	ancestors: Status[];
 	descendants: Status[];
 }
+
+export interface InstanceInfo {
+	host: string;
+	checked?: Maybe<number>;
+	isMastodon?: Maybe<boolean>;
+	software?: Maybe<string>;
+	version?: Maybe<string>;
+	lastRequest?: Maybe<number>; // timestamp
+	anyRequestSucceeded?: Maybe<boolean>;
+	lastRequestSucceeded?: Maybe<boolean>;
+	lastErrorCode?: Maybe<number>;
+	canRequestContext?: Maybe<boolean>;
+}

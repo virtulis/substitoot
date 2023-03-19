@@ -18,7 +18,7 @@ import {
 import { getStorage } from './storage.js';
 import { reportAndNull, sleep } from './util.js';
 import { getSettings } from './settings.js';
-import { callApi } from './fetch.js';
+import { callApi, fetchInstanceInfo, setInstanceInfo } from './fetch.js';
 
 export const contextLists = ['ancestors', 'descendants'] as const;
 export const remapIdFields = ['in_reply_to_id', 'in_reply_to_account_id'] as const;
@@ -236,7 +236,9 @@ export function addActiveStatusRequest(
 	if (activeStatusRequests.has(key)) throw new Error(`Status request already active: ${key}`);
 	const wrapped = Promise.race([promise, sleep(timeout)])
 		.catch()
-		.finally(() => activeStatusRequests.delete(key));
+		.finally(() => {
+			activeStatusRequests.delete(key);
+		});
 	activeStatusRequests.set(key, wrapped);
 	return wrapped;
 }
@@ -276,6 +278,9 @@ export async function fetchContext(mapping: RemoteMapping) {
 	if (getSettings().skipInstances.includes(mapping.remoteHost)) return null;
 	if (!mapping.remoteId.match(/^\d+$/)) return null; // not Mastodon
 	
+	const instance = await fetchInstanceInfo(mapping.remoteHost);
+	if (instance.isMastodon === false || instance.canRequestContext === false) return null;
+	
 	const url = `https://${mapping.remoteHost}/api/v1/statuses/${mapping.remoteId}/context`;
 	const key = `${mapping.remoteHost}:${mapping.remoteId}`;
 	
@@ -288,17 +293,32 @@ export async function fetchContext(mapping: RemoteMapping) {
 	
 	const promise = Promise.race([
 		(async () => {
+		
 			console.log('fetch', url);
+			
 			const res = await callApi(url);
-			if (!res.ok) return null;
+			if (res.status == 401 || res.status == 403) {
+				instance.canRequestContext = false;
+				await setInstanceInfo(instance);
+			}
+			if (!res.ok) {
+				return null;
+			}
+			
 			const json = await res.json().catch(() => null);
 			if (!json || !Array.isArray(json.ancestors) || !Array.isArray(json.descendants)) return null;
+			
 			await getStorage().put('remoteContextCache', {
 				key,
 				fetched: now,
 				context: json,
 			});
+			
+			instance.canRequestContext = true;
+			await setInstanceInfo(instance);
+			
 			return json as ContextResponse;
+			
 		})(),
 		sleep(getSettings().contextRequestTimeout),
 	]).finally(() => {
@@ -339,7 +359,7 @@ export async function provideMapping(known: MappingData, timeout = getSettings()
 	const promise: Promise<StatusResult> = callApi(search)
 		.then(async res => {
 			const json = await res.json();
-			console.log('search res', res.json);
+			console.log('search res', json);
 			const status = json.statuses?.[0];
 			if (!status) return null;
 			return await processStatusJSON(localHost, status);
