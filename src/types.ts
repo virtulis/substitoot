@@ -43,8 +43,8 @@ export interface Mapping extends MappingData {
 	
 }
 export interface StatusMapping extends Mapping {
-	uri: string;
-	username: Maybe<string>;
+	uri?: string;
+	username?: Maybe<string>;
 }
 
 export type LocalMapping<T extends MappingData = MappingData> = T & { localId: string };

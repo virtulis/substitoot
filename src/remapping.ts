@@ -17,7 +17,7 @@ import {
 } from './types.js';
 
 import { getStorage } from './storage.js';
-import { reportAndNull, sleep } from './util.js';
+import { ActiveRequestMap, reportAndNull } from './util.js';
 import { getSettings } from './settings.js';
 import { callApi, fetchInstanceInfo, setInstanceInfo } from './fetch.js';
 
@@ -44,11 +44,11 @@ export function parseId(localHost: string, id: string): Maybe<MappingData> {
 }
 
 export async function getLocalStatusMapping({ localHost, localId }: LocalMapping) {
-	console.log('get', 'localStatusMapping', `${localHost}:${localId}`);
+	// console.log('get', 'localStatusMapping', `${localHost}:${localId}`);
 	return await getStorage().get('localStatusMapping', `${localHost}:${localId}`) as Maybe<LocalMapping<StatusMapping>>;
 }
 export async function getRemoteStatusMapping({ localHost, remoteHost, remoteId }: RemoteMapping) {
-	console.log('get', 'remoteStatusMapping', `${localHost}:${remoteHost}:${remoteId}`);
+	// console.log('get', 'remoteStatusMapping', `${localHost}:${remoteHost}:${remoteId}`);
 	return await getStorage().get('remoteStatusMapping', `${localHost}:${remoteHost}:${remoteId}`) as Maybe<RemoteMapping<StatusMapping>>;
 }
 export async function getStatusMapping(mapping: MappingData): Promise<Maybe<StatusMapping>> {
@@ -150,7 +150,7 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 		const { remoteHost, remoteId, remoteReference } = identifyStatus(localHost, status);
 		
 		if (remoteHost == localHost) {
-			console.log('local status', remoteId, uri);
+			// console.log('local status', remoteId, uri);
 			remapIds.set(status.id, remoteId);
 			// skip since it probably means it's deleted
 			continue;
@@ -186,19 +186,19 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 		const accKey = account?.url;
 		if (accKey && accounts.has(accKey)) {
 			status.account = accounts.get(accKey);
-			console.log('got acct', accKey);
+			// console.log('got acct', accKey);
 		}
 		else if (accKey) {
 			const accUrl = new URL(account.url);
 			account.id = `s:a:${accUrl.hostname}:${encodeURIComponent(accUrl.pathname.slice(1))}`;
 			if (account.acct && !account.acct.includes('@')) account.acct += `@${accUrl.hostname}`;
 			accounts.set(accKey, account);
-			console.log('new acct', accKey);
+			// console.log('new acct', accKey);
 		}
 		
 		status.content = DOMPurify.sanitize(status.content);
 		
-		console.log('new status', uri, status.id);
+		// console.log('new status', uri, status.id);
 		localResponse[list].push(status);
 		
 	}
@@ -219,47 +219,23 @@ export type StatusResult = Maybe<{
 	status: Maybe<Status>;
 }>;
 
-// TODO it's probably a good idea to DRY this pattern
-const activeStatusRequests = new Map<string, Promise<StatusResult>>();
-const activeAccountRequests = new Map<string, Promise<Maybe<Mapping>>>();
-
-export function getActiveStatusRequest(key: string): Maybe<Promise<StatusResult>> {
-	return activeStatusRequests.get(key);
-}
-
-export function addActiveStatusRequest(
-	key: string,
-	promise: Promise<StatusResult>,
-	timeout = getSettings().statusRequestTimeout,
-) {
-	// const key = `${localHost}:${localId}`;
-	if (activeStatusRequests.has(key)) throw new Error(`Status request already active: ${key}`);
-	const wrapped = Promise.race([promise, sleep(timeout)])
-		.catch()
-		.finally(() => {
-			activeStatusRequests.delete(key);
-		});
-	activeStatusRequests.set(key, wrapped);
-	return wrapped;
-}
+export const statusRequests = new ActiveRequestMap<StatusResult>({ timeout: getSettings().statusRequestTimeout });
+const contextRequests = new ActiveRequestMap<ContextResponse>({ timeout: getSettings().contextRequestTimeout });
+const accountRequests = new ActiveRequestMap<Mapping>({ timeout: getSettings().searchTimeout });
 
 export async function fetchStatus(hostname: string, id: string) {
 	const key = `${hostname}:${id}`;
 	const url = `https://${hostname}/api/v1/statuses/${id}`;
-	const active = getActiveStatusRequest(key);
-	if (active) return await active;
-	return await addActiveStatusRequest(
+	return await statusRequests.perform(
 		key,
-		callApi(url)
+		() => callApi(url)
 			.then(res => res.json())
 			.then(json => processStatusJSON(hostname, json))
 			.catch(reportAndNull),
 	);
 }
 
-const activeContextRequests = new Map<string, Promise<Maybe<ContextResponse>>>();
 let contextCacheCleared = 0;
-
 export async function maybeClearContextCache() {
 	const now = Date.now();
 	if (now - contextCacheCleared < 60_000) return;
@@ -268,7 +244,7 @@ export async function maybeClearContextCache() {
 	const tx = getStorage().transaction('remoteContextCache', 'readwrite');
 	for await (const rec of tx.store) {
 		if (rec.value.fetched > thresh) continue;
-		console.log('delete context cache', rec.key);
+		// console.log('delete context cache', rec.key);
 		await rec.delete();
 	}
 }
@@ -289,10 +265,9 @@ export async function fetchContext(mapping: RemoteMapping) {
 	const cached = await getStorage().get('remoteContextCache', key);
 	if (cached && now - cached.fetched < ttl) return cached.context;
 	
-	if (activeContextRequests.has(key)) return await activeContextRequests.get(key) as ContextResponse;
-	
-	const promise = Promise.race([
-		(async () => {
+	return await contextRequests.perform(
+		key,
+		async () => {
 		
 			console.log('fetch', url);
 			
@@ -319,54 +294,42 @@ export async function fetchContext(mapping: RemoteMapping) {
 			
 			return json as ContextResponse;
 			
-		})(),
-		sleep(getSettings().contextRequestTimeout),
-	]).finally(() => {
-		activeContextRequests.delete(key);
-		maybeClearContextCache().catch(reportAndNull);
-	});
-	activeContextRequests.set(key, promise);
-	
-	return await promise;
+		},
+	);
 	
 }
 
 export async function provideMapping(known: MappingData, timeout = getSettings().searchTimeout): Promise<StatusResult> {
 	
 	const { localHost } = known;
-	let mapping = await getStatusMapping(known);
-	let status: Maybe<Status> = null;
+	const existing = await getStatusMapping(known);
+	if (isFullMapping(existing)) return { mapping: existing, status: null };
 	
-	if (!isRemoteMapping(mapping) && isLocalMapping(known)) {
+	// this is not supposed to happen unless was cache cleared during use
+	if (isLocalMapping(known)) {
 		const result = await fetchStatus(localHost, known.localId);
-		if (result) ({ mapping, status } = result);
+		if (result) return result;
 	}
 	
-	console.log({ known, mapping });
-	
-	// by now we expect either a full mapping, or a remote mapping with username
-	if (mapping && isFullMapping(mapping)) return { mapping, status };
+	const mapping = (existing ?? known) as StatusMapping;
 	if (!isRemoteMapping(mapping) || (!mapping.username && !mapping.uri)) return null;
 	
-	const key = `${mapping.localHost}:${mapping.remoteHost}:${mapping.remoteId}`;
-	const active = getActiveStatusRequest(key);
-	if (active) return await active;
+	const key = `${known.localHost}:${known.remoteHost}:${known.remoteId}`;
 	
-	const uri = mapping.uri ?? `https://${mapping.remoteHost}/users/${mapping.username}/statuses/${mapping.remoteId}`;
-	const search = `https://${localHost}/api/v2/search?q=${uri}&resolve=true&limit=1&type=statuses`;
-	console.log('resolve', uri, search);
+	return await statusRequests.perform(key, async () => {
 	
-	const promise: Promise<StatusResult> = callApi(search)
-		.then(async res => {
-			const json = await res.json();
-			console.log('search res', json);
-			const status = json.statuses?.[0];
-			if (!status) return null;
-			return await processStatusJSON(localHost, status);
-		})
-		.catch(reportAndNull);
-	
-	return await addActiveStatusRequest(key, promise, timeout);
+		const uri = mapping.uri ?? `https://${mapping.remoteHost}/users/${mapping.username}/statuses/${mapping.remoteId}`;
+		const search = `https://${localHost}/api/v2/search?q=${uri}&resolve=true&limit=1&type=statuses`;
+		console.log('resolve', uri, search);
+		
+		const res = await callApi(search);
+		const json = await res.json();
+		
+		const status = json.statuses?.[0];
+		if (!status) return null;
+		return await processStatusJSON(localHost, status);
+		
+	}, timeout);
 	
 }
 
@@ -374,7 +337,9 @@ async function fetchAccount(known: RemoteMapping) {
 	
 	const { localHost, remoteHost, remoteId } = known;
 	
-	const lookupRes = await callApi(`https://${localHost}/api/v1/accounts/lookup?acct=${remoteId}@${remoteHost}`).catch(reportAndNull);
+	const ref = `${remoteId}@${remoteHost}`;
+	
+	const lookupRes = await callApi(`https://${localHost}/api/v1/accounts/lookup?acct=${ref}`).catch(reportAndNull);
 	if (!lookupRes) return null;
 	
 	if (lookupRes.ok) {
@@ -392,7 +357,9 @@ async function fetchAccount(known: RemoteMapping) {
 		return mapping;
 	}
 	
-	const searchRes = await callApi(`https://${localHost}/api/v2/search?q=${remoteId}@${remoteHost}&resolve=true&limit=1&type=accounts`).catch(reportAndNull);
+	const searchUrl = `https://${localHost}/api/v2/search?q=${ref}&resolve=true&limit=1&type=accounts`;
+	console.log('resolve', ref, searchUrl);
+	const searchRes = await callApi(searchUrl).catch(reportAndNull);
 	if (!searchRes || !searchRes.ok) return null;
 	
 	const json = await searchRes.json();
@@ -417,25 +384,14 @@ export async function provideAccountMapping(known: RemoteMapping, timeout = getS
 	
 	const { localHost, remoteHost, remoteId } = known;
 	const mapping = await getStorage().get('remoteAccountMapping', `${localHost}:${remoteHost}:${remoteId}`) as Maybe<RemoteMapping<Mapping>>;
-	console.log({ known, mapping });
+	// console.log({ known, mapping });
 	
 	// by now we expect either a full mapping, or a remote mapping with username
 	if (mapping && isFullMapping(mapping)) return mapping;
 	// if (!isRemoteMapping(mapping)) return null;
 	
 	const key = `${known.localHost}:${known.remoteHost}:${known.remoteId}`;
-	const active = activeAccountRequests.get(key);
-	if (active) return await active;
-	
-	const promise: Promise<Maybe<Mapping>> = Promise.race([
-		fetchAccount(mapping ?? known),
-		sleep(timeout),
-	])
-		.catch(reportAndNull)
-		.finally(() => activeStatusRequests.delete(key));
-	activeAccountRequests.set(key, promise);
-	
-	return await promise;
+	return await accountRequests.perform(key, () => fetchAccount(mapping ?? known));
 	
 }
 
@@ -451,7 +407,7 @@ export async function getRedirFromNav(url: string) {
 	if (!remoteHost || !remoteId) return null;
 	
 	const result = await provideMapping({ localHost, remoteHost, remoteId });
-	console.log({ result });
+	// console.log({ result });
 	if (!result || !result.mapping.localId) return null;
 	
 	return `https://${hostname}${before}${result.mapping.localId}${after}`;

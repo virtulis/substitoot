@@ -4,13 +4,13 @@ import { getSettings, Settings } from './settings.js';
 import {
 	fetchContext,
 	fetchStatus,
-	getActiveStatusRequest,
 	getStatusMapping,
 	mergeContextResponses,
 	parseId,
 	processStatusJSON,
 	provideAccountMapping,
 	provideMapping,
+	statusRequests,
 } from './remapping.js';
 import { sleep } from './util.js';
 
@@ -105,11 +105,12 @@ const statusRequestHandler: FilterHandler = async details => {
 	
 	const key = `${localHost}:${parsed.localId}`;
 	
-	// If there is already an active request, keep it as is
-	if (getActiveStatusRequest(key)) return {};
+	// If there is already an active request, keep it as is and still perform this one
+	if (statusRequests.get(key)) return {};
 	
 	return wrapHandler(details, async json => {
-		if (json.id) await processStatusJSON(localHost, json);
+		if (!json.id) return;
+		await statusRequests.add(key, processStatusJSON(localHost, json));
 	});
 	
 };

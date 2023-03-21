@@ -1,4 +1,4 @@
-import { packageVersion, reportAndNull, sleep } from './util.js';
+import { ActiveRequestMap, packageVersion, reportAndNull, sleep } from './util.js';
 import { InstanceInfo, Maybe } from './types.js';
 import { getStorage } from './storage.js';
 
@@ -45,18 +45,13 @@ export async function setInstanceInfo(instance: InstanceInfo) {
 	await getStorage().put('instances', instance);
 }
 
-const activeInstanceRequests = new Map<string, Promise<InstanceInfo>>;
+const instanceRequests = new ActiveRequestMap<InstanceInfo>({ timeout: 5_000 });
 export async function fetchInstanceInfo(host: string, force = false): Promise<InstanceInfo> {
-	
-	const active = await activeInstanceRequests.get(host);
-	if (active) return await active;
 	
 	const instance: InstanceInfo = (await getStorage().get('instances', host)) ?? { host };
 	if (!force && instance?.checked && Date.now() - instance.checked < 24 * 3600_000) return instance;
 	
-	const promise = doFetchInstanceInfo(instance).finally(() => activeInstanceRequests.delete(host));
-	activeInstanceRequests.set(host, promise);
-	return await promise;
+	return (await instanceRequests.perform(host, () => doFetchInstanceInfo(instance))) ?? { host };
 	
 }
 
