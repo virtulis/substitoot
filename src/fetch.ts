@@ -109,7 +109,7 @@ async function doFetchInstanceInfo(instance: InstanceInfo) {
 			instance.canRequestContext = null; // go check again
 		}
 		instance.version = version;
-		instance.isMastodon = !!json.configuration?.statuses?.max_characters; // dumb random duck typing
+		instance.isMastodon = !!json.urls?.streaming_api; // dumb random duck typing
 		instance.software = instance.isMastodon ? 'mastodon' : null;
 	}
 	else {
