@@ -2,6 +2,7 @@ import { updateFirefoxEventHandlers } from './firefox.js';
 import { initSettings } from './settings.js';
 import { clearCache, clearMetadata, initStorage } from './storage.js';
 import { packageVersion } from './util.js';
+import { maybeClearContextCache } from './remapping.js';
 
 let initRun = false;
 async function init() {
@@ -10,6 +11,7 @@ async function init() {
 	console.log('init', packageVersion);
 	await initStorage();
 	await initSettings(updateFirefoxEventHandlers);
+	await maybeClearContextCache();
 }
 
 browser.runtime.onStartup.addListener(init);

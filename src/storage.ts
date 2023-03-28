@@ -1,14 +1,22 @@
 import { DBSchema, IDBPDatabase, openDB } from 'idb/with-async-ittr';
-import { ContextResponse, InstanceInfo, Mapping, StatusMapping } from './types.js';
+import {
+	AccountMapping,
+	ContextResponse,
+	InstanceInfo, isLocalMapping,
+	LocalMapping,
+	Mapping,
+	RemoteMapping,
+	StatusMapping,
+} from './types.js';
 
 export interface Storage extends DBSchema {
 	localStatusMapping: {
 		key: string;
-		value: StatusMapping;
+		value: LocalMapping<StatusMapping>;
 	};
 	remoteStatusMapping: {
 		key: string;
-		value: StatusMapping;
+		value: RemoteMapping<StatusMapping>;
 	};
 	remoteContextCache: {
 		key: string;
@@ -22,17 +30,23 @@ export interface Storage extends DBSchema {
 		key: string;
 		value: InstanceInfo;
 	};
+	localAccountMapping: {
+		key: string;
+		value: LocalMapping<AccountMapping>;
+	};
 	remoteAccountMapping: {
 		key: string;
-		value: Mapping;
+		value: RemoteMapping<AccountMapping>;
 	};
 }
 
 let db: IDBPDatabase<Storage>;
 
 export async function initStorage() {
-	db = await openDB<Storage>('substitoot', 4_01_02, {
-		upgrade: (db, v) => {
+	db = await openDB<Storage>('substitoot', 4_03_04, {
+		upgrade: async (db, v, _nv, tx) => {
+		
+			const now = Date.now();
 		
 			if (v < 3_00_00) db.createObjectStore('localStatusMapping', { keyPath: 'localReference' } );
 			if (v < 3_00_00) db.createObjectStore('remoteStatusMapping', { keyPath: 'remoteReference' } );
@@ -43,6 +57,25 @@ export async function initStorage() {
 			if (v < 4_00_00 && !db.objectStoreNames.contains('instances')) db.createObjectStore('instances', { keyPath: 'host' } );
 			
 			if (v < 4_01_02) db.createObjectStore('remoteAccountMapping', { keyPath: 'remoteReference' } );
+			
+			if (v < 4_03_00 && !db.objectStoreNames.contains('localAccountMapping')) db.createObjectStore('localAccountMapping', { keyPath: 'localReference' } );
+			
+			if (v < 4_03_04) for await (const entry of tx.objectStore('remoteAccountMapping').iterate()) {
+				const { value } = entry;
+				value.updated ??= now;
+				value.remoteId = value.remoteId?.replace(/^@/, '');
+				value.remoteReference = `${value.localHost}:${value.remoteHost}:${value.remoteId}`;
+				await entry.delete();
+				tx.objectStore('remoteAccountMapping').put(value);
+				if (isLocalMapping(value)) {
+					value.localReference = `${value.localHost}:${value.localId}`;
+					tx.objectStore('localAccountMapping').put(value);
+				}
+			}
+			
+			if (v < 4_03_01) for (const store of ['localStatusMapping', 'remoteStatusMapping'] as const) for await (const entry of tx.objectStore(store).iterate()) {
+				await entry.update({ ...entry.value, updated: now });
+			}
 			
 		},
 	});

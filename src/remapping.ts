@@ -3,7 +3,9 @@ import { v3 as murmurhash } from 'murmurhash';
 
 import {
 	Account,
+	AccountMapping,
 	ContextResponse,
+	FullMapping,
 	isFullMapping,
 	isLocalMapping,
 	isRemoteMapping,
@@ -23,7 +25,6 @@ import { callApi, fetchInstanceInfo, setInstanceInfo } from './fetch.js';
 
 export const contextLists = ['ancestors', 'descendants'] as const;
 export const remapIdFields = ['in_reply_to_id', 'in_reply_to_account_id'] as const;
-export const remoteToLocalCache = new Map<string, string | null | Promise<string | null>>();
 
 export function parseId(localHost: string, id: string): Maybe<MappingData> {
 	const match = id.match(/^s:(.):([^:/]+):([^:/]+)$/);
@@ -39,7 +40,7 @@ export function parseId(localHost: string, id: string): Maybe<MappingData> {
 		localHost,
 		localId: null,
 		remoteHost: match[2],
-		remoteId: decodeURIComponent(match[3]),
+		remoteId: decodeURIComponent(match[3]).replace(/^@/, ''),
 	};
 }
 
@@ -71,7 +72,7 @@ export async function processStatusJSON(localHost: string, status: Status, save 
 	const { remoteHost, remoteId, remoteReference } = identifyStatus(localHost, status);
 	const username = status.account?.username;
 	
-	const mapping: StatusMapping = {
+	const mapping: LocalMapping<StatusMapping> = {
 		uri: status.uri,
 		localReference,
 		remoteReference,
@@ -80,12 +81,13 @@ export async function processStatusJSON(localHost: string, status: Status, save 
 		remoteHost,
 		remoteId,
 		username,
+		updated: Date.now(),
 	};
 	
 	if (save) {
 		// console.log('put', 'localStatusMapping', mapping);
 		await getStorage().put('localStatusMapping', mapping);
-		if (remoteReference) await getStorage().put('remoteStatusMapping', mapping);
+		if (isRemoteMapping(mapping)) await getStorage().put('remoteStatusMapping', mapping);
 	}
 	
 	return { mapping, status };
@@ -99,9 +101,11 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 	remoteResponse: ContextResponse;
 }) {
 	
-	const tx = getStorage().transaction(['localStatusMapping', 'remoteStatusMapping'], 'readwrite');
+	const tx = getStorage().transaction(['localStatusMapping', 'remoteStatusMapping', 'localAccountMapping', 'remoteAccountMapping'], 'readwrite');
 	const localStore = tx.objectStore('localStatusMapping');
 	const remoteStore = tx.objectStore('remoteStatusMapping');
+	const localAccountStore = tx.objectStore('localAccountMapping');
+	const remoteAccountStore = tx.objectStore('remoteAccountMapping');
 	
 	const local = new Map<string, Status>;
 	const accounts = new Map<string, Account>;
@@ -115,7 +119,7 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 		local.set(uri, status);
 		
 		const { remoteHost, remoteId, remoteReference } = identifyStatus(localHost, status);
-		const mapping: StatusMapping = {
+		const mapping: FullMapping<StatusMapping> = {
 			
 			uri: status.uri,
 			
@@ -128,12 +132,35 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 			
 			localReference: `${localHost}:${status.id}`,
 			remoteReference,
+			updated: Date.now(),
 			
 		};
 		await localStore.put(mapping);
 		if (remoteHost != localHost) await remoteStore.put(mapping);
 		
-		if (account) accounts.set(account.url, account);
+		if (!account) continue; // never happens
+		
+		const [username, host] = account.acct.split('@');
+		const acctHost = host ?? localHost;
+		accounts.set(`${username}@${acctHost}`, account);
+		
+		const acctMap: FullMapping<AccountMapping> = {
+			localHost,
+			localId: account.id,
+			remoteHost: acctHost,
+			remoteId: username,
+			localReference: `${localHost}:${account.id}`,
+			remoteReference: `${localHost}:${acctHost}:${username}`,
+			updated: Date.now(),
+		};
+		localAccountStore.put({
+			...await localAccountStore.get(acctMap.localReference),
+			...acctMap,
+		});
+		remoteAccountStore.put({
+			...await remoteAccountStore.get(acctMap.remoteReference),
+			...acctMap,
+		});
 		
 	}
 	
@@ -165,7 +192,8 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 			uri: status.uri,
 			remoteHost,
 			remoteId,
-			username: status.account?.username,
+			username: account?.username,
+			updated: Date.now(),
 		};
 		const remoteLocalReference = `${remoteHost}:${remoteId}`;
 		if (!await localStore.count(remoteLocalReference)) await localStore.put({
@@ -183,18 +211,32 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 			remoteReference,
 		});
 		
-		const accKey = account?.url;
-		if (accKey && accounts.has(accKey)) {
-			status.account = accounts.get(accKey);
-			// console.log('got acct', accKey);
+		const [username, host] = account.acct.split('@');
+		const acctHost = host ?? localHost;
+		const acct = `${username}@${acctHost}`;
+		account.acct = acct;
+		if (accounts.has(acct)) {
+			status.account = accounts.get(acct)!;
 		}
-		else if (accKey) {
-			const accUrl = new URL(account.url);
-			account.id = `s:a:${accUrl.hostname}:${encodeURIComponent(accUrl.pathname.slice(1))}`;
-			if (account.acct && !account.acct.includes('@')) account.acct += `@${accUrl.hostname}`;
-			accounts.set(accKey, account);
-			// console.log('new acct', accKey);
+		else {
+			const acctRef = `${localHost}:${acctHost}:${remoteId}`;
+			const ex = await remoteAccountStore.get(acctRef);
+			if (isLocalMapping(ex)) {
+				account.id = ex.localId;
+			}
+			else {
+				account.id = `s:a:${acctHost}:${username}`;
+				remoteAccountStore.put({
+					localHost,
+					remoteHost: acctHost,
+					remoteId: username,
+					remoteReference: `${localHost}:${acctHost}:${username}`,
+					updated: Date.now(),
+				});
+			}
+			accounts.set(acct, status.account);
 		}
+		
 		
 		status.content = DOMPurify.sanitize(status.content);
 		
@@ -295,7 +337,7 @@ export async function fetchContext(mapping: RemoteMapping) {
 			return json as ContextResponse;
 			
 		},
-	);
+	).finally(maybeClearContextCache);
 	
 }
 
@@ -344,7 +386,7 @@ async function fetchAccount(known: RemoteMapping) {
 	
 	if (lookupRes.ok) {
 		const lookupJson = await lookupRes.json() as Account;
-		const mapping: Mapping = {
+		const mapping: FullMapping<AccountMapping> = {
 			type: 'a',
 			localHost,
 			localId: lookupJson.id,
@@ -352,7 +394,9 @@ async function fetchAccount(known: RemoteMapping) {
 			remoteId,
 			localReference: `${localHost}:${lookupJson.id}`,
 			remoteReference: `${localHost}:${remoteHost}:${remoteId}`,
+			updated: Date.now(),
 		};
+		await getStorage().put('localAccountMapping', mapping);
 		await getStorage().put('remoteAccountMapping', mapping);
 		return mapping;
 	}
@@ -366,7 +410,7 @@ async function fetchAccount(known: RemoteMapping) {
 	const account = json.accounts?.[0] as Account;
 	if (!account) return null;
 	
-	const mapping: Mapping = {
+	const mapping: FullMapping<AccountMapping> = {
 		type: 'a',
 		localHost,
 		localId: account.id,
@@ -374,7 +418,9 @@ async function fetchAccount(known: RemoteMapping) {
 		remoteId,
 		localReference: `${localHost}:${account.id}`,
 		remoteReference: `${localHost}:${remoteHost}:${remoteId}`,
+		updated: Date.now(),
 	};
+	await getStorage().put('localAccountMapping', mapping);
 	await getStorage().put('remoteAccountMapping', mapping);
 	return mapping;
 
@@ -382,7 +428,9 @@ async function fetchAccount(known: RemoteMapping) {
 
 export async function provideAccountMapping(known: RemoteMapping, timeout = getSettings().searchTimeout): Promise<Maybe<Mapping>> {
 	
-	const { localHost, remoteHost, remoteId } = known;
+	const { localHost, remoteHost } = known;
+	const remoteId = known.remoteId.replace(/^@/, '');
+	
 	const mapping = await getStorage().get('remoteAccountMapping', `${localHost}:${remoteHost}:${remoteId}`) as Maybe<RemoteMapping<Mapping>>;
 	// console.log({ known, mapping });
 	

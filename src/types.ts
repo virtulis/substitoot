@@ -9,7 +9,7 @@ export interface Thing {
 
 export interface Status extends Thing {
 	uri: string;
-	account?: Maybe<Account>;
+	account: Account;
 	content: string;
 	in_reply_to_id?: Maybe<string>;
 	in_reply_to_account_id?: Maybe<string>;
@@ -17,7 +17,7 @@ export interface Status extends Thing {
 
 export interface Account extends Thing {
 	username?: Maybe<string>;
-	acct?: Maybe<string>;
+	acct: string;
 }
 
 export interface MappingData {
@@ -28,27 +28,32 @@ export interface MappingData {
 	remoteId?: Maybe<string>;
 }
 export interface Mapping extends MappingData {
+
+	updated: number;
 	
 	/**
 	 * localHost:localId
 	 */
-	localReference: Maybe<string>;
+	localReference?: Maybe<string>;
 	
 	/**
 	 * localHost:remoteHost:remoteId
 	 *
 	 * Used to look up existing local status (if any) by localHost and the remote reference.
 	 */
-	remoteReference: Maybe<string>;
+	remoteReference?: Maybe<string>;
 	
 }
 export interface StatusMapping extends Mapping {
 	uri?: string;
 	username?: Maybe<string>;
 }
+export interface AccountMapping extends Mapping {
+	followedSince?: Maybe<number>;
+}
 
-export type LocalMapping<T extends MappingData = MappingData> = T & { localId: string };
-export type RemoteMapping<T extends MappingData = MappingData> = T & { remoteId: string; remoteHost: string };
+export type LocalMapping<T extends MappingData = MappingData> = T & { localId: string } & (T extends Mapping ? { localReference: string } : {});
+export type RemoteMapping<T extends MappingData = MappingData> = T & { remoteId: string; remoteHost: string } & (T extends Mapping ? { remoteReference: string } : {});
 export type FullMapping<T extends MappingData = MappingData> = LocalMapping<RemoteMapping<T>>;
 
 export function isLocalMapping<T extends MappingData>(it: Maybe<T>): it is LocalMapping<T> {
