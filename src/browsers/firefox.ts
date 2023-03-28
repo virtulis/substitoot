@@ -1,10 +1,12 @@
-import { beforeRequestListener, getWebRequestFilter, requestUrlDeleter } from './requests.js';
-import { getRedirFromNav } from './remapping.js';
-import { getSettings } from './settings.js';
-import { reportAndNull } from './util.js';
+// Firefox-specific mechanisms
+// See also request-filter.ts
+
+import { beforeRequestListener, getWebRequestFilter, requestUrlDeleter } from './request-filter.js';
+import { getSettings } from '../settings.js';
+import { reportAndNull } from '../util.js';
+import { provideNavigationRedirect } from '../remapping/navigation.js';
 
 const handlingTabs = new Set<number>();
-
 
 const navigationListener = async (details: browser.webNavigation._OnCompletedDetails) => {
 	
@@ -14,7 +16,7 @@ const navigationListener = async (details: browser.webNavigation._OnCompletedDet
 	handlingTabs.add(tabId);
 	setTimeout(() => handlingTabs.delete(tabId), 2_000);
 	
-	const redir = await getRedirFromNav(url);
+	const redir = await provideNavigationRedirect(url);
 	console.log('redir', redir);
 	if (redir) {
 		await browser.tabs.update(tabId, {
@@ -35,7 +37,7 @@ const historyListener = async (details: browser.webNavigation._OnHistoryStateUpd
 	handlingTabs.add(tabId);
 	setTimeout(() => handlingTabs.delete(tabId), 2_000);
 	
-	const redir = await getRedirFromNav(url);
+	const redir = await provideNavigationRedirect(url);
 	console.log('redir', redir);
 	if (redir) {
 		const res = await browser.scripting.executeScript({

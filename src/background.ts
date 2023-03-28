@@ -1,8 +1,11 @@
-import { updateFirefoxEventHandlers } from './firefox.js';
+// Entry point for the background process of the extension
+
+import { updateFirefoxEventHandlers } from './browsers/firefox.js';
 import { initSettings } from './settings.js';
 import { clearCache, clearMetadata, initStorage } from './storage.js';
 import { packageVersion } from './util.js';
-import { maybeClearContextCache } from './remapping.js';
+
+import { maybeClearContextCache } from './remapping/context.js';
 
 let initRun = false;
 async function init() {

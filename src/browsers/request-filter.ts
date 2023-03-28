@@ -1,18 +1,20 @@
-import { ContextResponse, isLocalMapping, isRemoteMapping, Maybe } from './types.js';
-import { ownRequests } from './fetch.js';
-import { getSettings, Settings } from './settings.js';
+// Request interception using webRequest.filterResponseData etc.
+// Mostly Firefox-specific
+
+import { ContextResponse, isLocalMapping, isRemoteMapping, Maybe } from '../types.js';
+import { getSettings, Settings } from '../settings.js';
+import { sleep } from '../util.js';
 import {
-	fetchContext,
 	fetchStatus,
 	getStatusMapping,
-	mergeContextResponses,
-	parseId,
 	processStatusJSON,
-	provideAccountMapping,
-	provideMapping,
+	provideStatusMapping,
 	statusRequests,
-} from './remapping.js';
-import { sleep } from './util.js';
+} from '../remapping/statuses.js';
+import { fetchContext, mergeContextResponses } from '../remapping/context.js';
+import { provideAccountMapping } from '../remapping/accounts.js';
+import { parseId } from '../remapping/ids.js';
+import { ownRequests } from '../instances/fetch.js';
 
 type RequestDetails = browser.webRequest._OnBeforeRequestDetails;
 type BlockingResponse = browser.webRequest.BlockingResponse;
@@ -98,7 +100,7 @@ const statusRequestHandler: FilterHandler = async details => {
 	// If this is a request for a remote status, attempt to substitute a local one.
 	// TODO Does this even happen?
 	if (isRemoteMapping(parsed)) {
-		const result = await provideMapping(parsed);
+		const result = await provideStatusMapping(parsed);
 		if (!result?.mapping.localId) return {};
 		return { redirectUrl: `https://${localHost}/${prefix.join('/')}/${result?.mapping.localId}` };
 	}
@@ -138,7 +140,7 @@ const statusContextHandler: FilterHandler = async details => {
 		// client is trying to fetch context for a fake id (or our db is screwed up)
 		if (!isLocalMapping(mapping)) {
 			console.log('fix mapping', mapping);
-			mapping = await provideMapping(mapping).then(res => res?.mapping);
+			mapping = await provideStatusMapping(mapping).then(res => res?.mapping);
 		}
 		
 		// requested via fake id, redirect, keep remoteReq dangling (it will be reused)
@@ -182,7 +184,7 @@ const statusActionHandler: FilterHandler = async details => {
 	// If this is a request for a fake status ID, attempt to substitute a real one.
 	if (!isLocalMapping(parsed)) {
 		console.log('fix action', details.url);
-		const result = await provideMapping(parsed);
+		const result = await provideStatusMapping(parsed);
 		if (!result?.mapping.localId) return {};
 		const redirectUrl = `https://${localHost}/${prefix.join('/')}/${result?.mapping.localId}/${rest.join('/')}`;
 		console.log('redir action to', redirectUrl);

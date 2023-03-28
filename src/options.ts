@@ -1,3 +1,5 @@
+// Client-side helpers for the options page (see ../static/options.html)
+
 import { computePermissions, defaultSettings, Settings } from './settings.js';
 import { reportAndNull } from './util.js';
 

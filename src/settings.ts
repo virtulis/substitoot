@@ -1,3 +1,5 @@
+// Extension settings storage (used by both options.ts and background.ts)
+
 export interface Settings {
 	
 	instances: string[];

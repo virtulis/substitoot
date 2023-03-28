@@ -1,3 +1,5 @@
+// Basic IndexedDB storage wrapper
+
 import { DBSchema, IDBPDatabase, openDB } from 'idb/with-async-ittr';
 import {
 	AccountMapping,
