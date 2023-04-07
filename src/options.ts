@@ -38,7 +38,8 @@ async function load() {
 }
 
 async function save() {
-	await browser.storage.sync.set({ settings });
+	const changed = Object.fromEntries(Object.entries(settings).filter(([k, v]) => v != defaultSettings[k as keyof Settings]));
+	await browser.storage.sync.set({ settings: changed });
 	await checkPermissions();
 }
 

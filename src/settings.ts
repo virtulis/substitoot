@@ -24,8 +24,8 @@ export const defaultSettings: Settings = {
 	bypassFollowed: true,
 	preloadHome: false,
 	
-	statusRequestTimeout: 1_000,
-	contextRequestTimeout: 2_000,
+	statusRequestTimeout: 5_000,
+	contextRequestTimeout: 10_000,
 	searchTimeout: 10_000,
 	
 };
@@ -36,8 +36,19 @@ export function getSettings() {
 }
 
 export async function reloadSettings() {
-	const settRes = await browser.storage.sync.get('settings');
-	if (settRes.settings) settings = { ...settings, ...settRes.settings };
+	
+	let saved = await browser.storage.sync.get('settings').then(res => res.settings as Maybe<Partial<Settings>>);
+	
+	// FIXME clean up old defaults dumbly saved as "settings"
+	if (saved && (saved.searchTimeout == 3_000 || saved.contextRequestTimeout == 2_000)) {
+		saved = omit(saved, ['statusRequestTimeout', 'contextRequestTimeout', 'searchTimeout']);
+		for (const key of Object.keys(saved) as (keyof Settings)[]) if (saved[key] == defaultSettings[key]) delete saved[key];
+		console.log({ saved });
+		await browser.storage.sync.set({ settings: saved });
+	}
+	
+	if (saved) settings = { ...defaultSettings, ...saved };
+	
 }
 
 export async function initSettings(onChange: () => any) {
