@@ -44,6 +44,7 @@ export interface Status extends Thing {
 	content: string;
 	in_reply_to_id?: Maybe<string>;
 	in_reply_to_account_id?: Maybe<string>;
+	application?: Maybe<{ name?: Maybe<string> }>;
 }
 
 export interface Account extends Thing {

@@ -172,8 +172,9 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 			accounts.set(acct, account);
 		}
 		
-		
 		status.content = DOMPurify.sanitize(status.content);
+		
+		status.application = { name: 'Substitoot' };
 		
 		// console.log('new status', uri, status.id);
 		localResponse[list].push(status);
