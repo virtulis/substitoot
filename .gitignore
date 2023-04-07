@@ -13,3 +13,6 @@ tsconfig.tsbuildinfo
 /web/index.html
 /web/readme.html
 /web/sanitize.css
+
+/manifest.json
+
