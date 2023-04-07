@@ -25,7 +25,11 @@ function updateUI() {
 		if (focused == inputs[key]) continue;
 		inputs[key].value = String(settings[key]);
 	}
-	for (const key of ['bypassFollowed', 'preloadHome'] as const) {
+	for (const key of [
+		'bypassFollowed',
+		'preloadHome',
+		'useRequestFilter',
+	] as const) {
 		inputs[key].checked = settings[key];
 	}
 }
@@ -76,7 +80,7 @@ for (const key of ['cacheContentMins'] as const) {
 		save();
 	});
 }
-for (const key of ['bypassFollowed', 'preloadHome'] as const) {
+for (const key of ['bypassFollowed', 'preloadHome', 'useRequestFilter'] as const) {
 	inputs[key].addEventListener('change', () => {
 		settings[key] = inputs[key].checked;
 		save();

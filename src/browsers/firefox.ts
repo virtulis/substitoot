@@ -1,10 +1,11 @@
 // Firefox-specific mechanisms
 // See also request-filter.ts
 
-import { beforeRequestListener, getWebRequestFilter, requestUrlDeleter } from './request-filter.js';
+import { beforeRequestListener, getWebRequestFilter } from './request-filter.js';
 import { getSettings } from '../settings.js';
 import { reportAndNull } from '../util.js';
 import { provideNavigationRedirect } from '../remapping/navigation.js';
+import { Maybe } from '../types.js';
 
 const handlingTabs = new Set<number>();
 
@@ -55,39 +56,41 @@ const historyListener = async (details: browser.webNavigation._OnHistoryStateUpd
 };
 
 let settingsOpenedOnce = false;
+let contentScript: Maybe<browser.contentScripts.RegisteredContentScript>;
 
 export async function updateFirefoxEventHandlers() {
 	
-	const { webNavigation, webRequest } = browser;
+	const { webNavigation, webRequest, contentScripts, runtime } = browser;
+	
 	if (!webRequest || !webNavigation) {
 		console.error('permissions broken');
-		if (!settingsOpenedOnce) await browser.runtime.openOptionsPage();
+		if (!settingsOpenedOnce) await runtime.openOptionsPage();
 		settingsOpenedOnce = true;
 		return;
 	}
 	
 	const settings = getSettings();
+	console.log(settings.useRequestFilter);
 	
 	webRequest.onBeforeRequest.removeListener(beforeRequestListener);
-	webRequest.onCompleted.removeListener(requestUrlDeleter);
-	webRequest.onErrorOccurred.removeListener(requestUrlDeleter);
 	
 	webNavigation.onCompleted.removeListener(navigationListener);
 	webNavigation.onHistoryStateUpdated.removeListener(historyListener);
 	
+	await contentScript?.unregister().catch(reportAndNull);
+	contentScript = null;
+	
 	if (!settings.instances.length) {
 		console.log('no instances configured, disable');
-		if (!settingsOpenedOnce) await browser.runtime.openOptionsPage();
+		if (!settingsOpenedOnce) await runtime.openOptionsPage();
 		settingsOpenedOnce = true;
 		return;
 	}
 	
-	const filter = getWebRequestFilter(settings);
-	
-	webRequest.onBeforeRequest.addListener(beforeRequestListener, filter, ['blocking', 'requestBody']);
-	
-	webRequest.onCompleted.addListener(requestUrlDeleter, filter);
-	webRequest.onErrorOccurred.addListener(requestUrlDeleter, filter);
+	if (settings.useRequestFilter) {
+		const filter = getWebRequestFilter(settings);
+		webRequest.onBeforeRequest.addListener(beforeRequestListener, filter, ['blocking', 'requestBody']);
+	}
 	
 	webNavigation.onCompleted.addListener(navigationListener, {
 		url: settings.instances.map(host => ({
@@ -103,5 +106,13 @@ export async function updateFirefoxEventHandlers() {
 			pathContains: '/s:',
 		})),
 	});
+	
+	if (!settings.useRequestFilter) {
+		contentScript = await contentScripts.register({
+			js: [{ file: 'dist/content.js' }],
+			matches: settings.instances.map(host => `https://${host}/*`),
+			runAt: 'document_end',
+		});
+	}
 	
 }

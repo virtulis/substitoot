@@ -95,7 +95,7 @@ export async function fetchStatus(hostname: string, id: string) {
 	);
 }
 
-export async function provideStatusMapping(known: MappingData, timeout = getSettings().searchTimeout): Promise<StatusResult> {
+export async function provideStatusMapping(known: MappingData, timeout = getSettings().searchTimeout): Promise<Maybe<StatusResult>> {
 	
 	const { localHost } = known;
 	const existing = await getStatusMapping(known);

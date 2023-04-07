@@ -29,7 +29,8 @@
 			display: grid;
 			grid-auto-columns: min-content 1fr;
 			align-items: flex-start;
-			gap: 8px;
+			column-gap: 8px;
+			row-gap: 4px;
 		}
 		.checkbox > :not(input) {
 			grid-column: 2;
@@ -100,6 +101,17 @@
 	<div>Comma-separated list of domain names that the extension should not try to fetch statuses from. Will still include them if found elsewhere.</div>
 	<input id="skipInstances" placeholder="kludge.guru, ..."/>
 </div>
+
+<div class="checkbox">
+	<input type="checkbox" id="useRequestFilter"/>
+	<label for="useRequestFilter">
+		Use old webRequest filter approach
+	</label>
+	<small>
+		Substitoot 0.5+ intercepts requests via a page script by default. Use this if the new thing seems broken.
+	</small>
+</div>
+
 <div class="actions">
 	<button id="clearCache" type="button">Clear content cache</button>
 	<button id="clearMetadata" type="button">Clear cached metadata</button>

@@ -23,8 +23,6 @@ type FilterHandler = (details: RequestDetails) => Promise<BlockingResponse>;
 type JSONHandlerFilter = (json: any, details: RequestDetails) => void | Promise<void>;
 type JSONRewriterFilter = (json: any, details: RequestDetails) => Record<string, any> | Promise<Record<string, any>>;
 
-export const requestsInProgress = new Set<string>();
-
 export function wrapHandler(details: RequestDetails, handler: JSONHandlerFilter): BlockingResponse {
 	
 	console.log('handle', details.url);
@@ -284,8 +282,6 @@ export const beforeRequestListener = async (details: RequestDetails) => {
 	}
 	
 	console.log('req', details.url);
-	requestsInProgress.add(details.url);
-	// console.log('req', details.url);
 	
 	const parsed = new URL(details.url);
 	const parts = parsed.pathname.split('/').slice(3);
@@ -303,10 +299,6 @@ export const beforeRequestListener = async (details: RequestDetails) => {
 	
 	return {};
 	
-};
-
-export const requestUrlDeleter = (details: browser.webRequest._OnCompletedDetails | browser.webRequest._OnErrorOccurredDetails) => {
-	requestsInProgress.delete(details.url);
 };
 
 export function getWebRequestFilter(settings: Settings): browser.webRequest.RequestFilter {

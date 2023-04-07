@@ -6,6 +6,7 @@ import { clearCache, clearMetadata, initStorage } from './storage.js';
 import { packageVersion } from './util.js';
 
 import { maybeClearContextCache } from './remapping/context.js';
+import { setUpAPIPort } from './api/impl.js';
 
 let initRun = false;
 async function init() {
@@ -13,6 +14,7 @@ async function init() {
 	initRun = true;
 	console.log('init', packageVersion);
 	await initStorage();
+	setUpAPIPort();
 	await initSettings(updateFirefoxEventHandlers);
 	await maybeClearContextCache();
 }
@@ -20,7 +22,7 @@ async function init() {
 browser.runtime.onStartup.addListener(init);
 browser.runtime.onInstalled.addListener(init);
 
-browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener(async (message) => {
 	if (typeof message != 'object') return;
 	const command: string = message.command;
 	if (command == 'clearCache') {

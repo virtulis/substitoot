@@ -4,9 +4,9 @@ import { DBSchema, IDBPDatabase, openDB } from 'idb/with-async-ittr';
 import {
 	AccountMapping,
 	ContextResponse,
-	InstanceInfo, isLocalMapping,
+	InstanceInfo,
+	isLocalMapping,
 	LocalMapping,
-	Mapping,
 	RemoteMapping,
 	StatusMapping,
 } from './types.js';

@@ -26,6 +26,9 @@
 			"dist/background.js"
 		]
 	},
+	"web_accessible_resources": [
+		"dist/inject.js"
+	],
 	"browser_specific_settings": {
 		"gecko": {
 			"id": "substitoot@kludge.guru"

@@ -1,5 +1,8 @@
 // Extension settings storage (used by both options.ts and background.ts)
 
+import { omit } from './util.js';
+import { Maybe } from './types.js';
+
 export interface Settings {
 	
 	instances: string[];
@@ -7,6 +10,7 @@ export interface Settings {
 	
 	cacheContentMins: number;
 	
+	useRequestFilter: boolean;
 	preloadHome: boolean;
 	bypassFollowed: boolean;
 	
@@ -23,6 +27,7 @@ export const defaultSettings: Settings = {
 	cacheContentMins: 30,
 	bypassFollowed: true,
 	preloadHome: false,
+	useRequestFilter: false,
 	
 	statusRequestTimeout: 5_000,
 	contextRequestTimeout: 10_000,
