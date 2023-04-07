@@ -1,5 +1,5 @@
 import { wrapContextRequest } from './context.js';
-import { wrapStatusRequest } from './status.js';
+import { wrapStatusPostRequest, wrapStatusRequest } from './status.js';
 import { wrapAccountQueryRequest, wrapAccountRequest } from './account.js';
 
 export type PatchedXHR = XMLHttpRequest & {
@@ -50,17 +50,14 @@ export function wrapXHR() {
 		const parts = url.pathname.split('/').slice(1);
 		if (url.hostname != localHost || parts[0] != 'api') return send.apply(this, args);
 		
-		if (method == 'GET' && parts[2] == 'statuses' && parts[4] == 'context') {
-			return wrapContextRequest(this, parts);
+		if (parts[2] == 'statuses') {
+			if (method == 'GET' && parts[4] == 'context') return wrapContextRequest(this, parts);
+			if (parts[3]?.indexOf('s:') === 0) return wrapStatusRequest(this, parts, args);
+			if (method == 'POST' && typeof args[0] == 'string') return wrapStatusPostRequest(this, args[0]);
 		}
-		else if (parts[2] == 'statuses' && parts[3].indexOf('s:') == 0) {
-			return wrapStatusRequest(this, parts, args);
-		}
-		else if (parts[2] == 'accounts' && parts[3].indexOf('s:') == 0) {
-			return wrapAccountRequest(this, parts, args);
-		}
-		else if (parts[2] == 'accounts' && url.search.includes('s:a:')) {
-			return wrapAccountQueryRequest(this, url, args);
+		if (parts[2] == 'accounts') {
+			if (parts[3]?.indexOf('s:') === 0) return wrapAccountRequest(this, parts, args);
+			if (url.search.includes('s:a:')) return wrapAccountQueryRequest(this, url, args);
 		}
 		
 		return send.apply(this, args);
@@ -69,7 +66,7 @@ export function wrapXHR() {
 
 }
 
-export function swapInXHR(dest: PatchedXHR, url: string, sendArgs: any[]) {
+export function swapInXHR(dest: PatchedXHR, url: string, body: any) {
 	
 	const { onloadend, onerror, onabort } = dest;
 	
@@ -86,7 +83,7 @@ export function swapInXHR(dest: PatchedXHR, url: string, sendArgs: any[]) {
 	
 	actual.open(dest.__method, url);
 	for (const [name, value] of Object.entries(dest.__headers)) actual.setRequestHeader(name, value);
-	actual.__send(...sendArgs);
+	actual.__send(body);
 	
 	return actual;
 	
