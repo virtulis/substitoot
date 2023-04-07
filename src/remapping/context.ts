@@ -7,6 +7,7 @@ import {
 	ContextResponse,
 	FullMapping,
 	isLocalMapping,
+	Maybe,
 	RemoteMapping,
 	Status,
 	StatusMapping,
@@ -23,8 +24,8 @@ export const remapIdFields = ['in_reply_to_id', 'in_reply_to_account_id'] as con
 
 export async function mergeContextResponses({ localHost, mapping, localResponse, remoteResponse }: {
 	localHost: string;
-	mapping: RemoteMapping<StatusMapping>;
-	localResponse: ContextResponse;
+	mapping: RemoteMapping;
+	localResponse: Maybe<ContextResponse>;
 	remoteResponse: ContextResponse;
 }) {
 	
@@ -45,6 +46,8 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 	
 	remapIds.set(mapping.remoteId, mapping.localId ?? `s:s:${mapping.remoteHost}:${mapping.remoteId}`);
 	
+	localResponse ??= { ancestors: [], descendants: [] };
+
 	for (const list of contextLists) for (const status of localResponse[list] as Status[]) {
 		
 		const { uri, account } = status;
@@ -144,7 +147,7 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 		});
 		
 		const [username, host] = account.acct.split('@');
-		const acctHost = host ?? localHost;
+		const acctHost = host ?? remoteHost;
 		const acct = `${username}@${acctHost}`;
 		account.acct = acct;
 		if (accounts.has(acct)) {
@@ -166,7 +169,7 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 					updated: Date.now(),
 				});
 			}
-			accounts.set(acct, status.account);
+			accounts.set(acct, account);
 		}
 		
 		
