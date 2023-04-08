@@ -46,7 +46,17 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 	// console.log(mapping);
 	
 	if (mapping.remoteHost == mapping.localHost) {
-		return xhr.__send();
+		if (!isSecondReq) {
+			xhr.__send();
+		}
+		else {
+			const localResponse = await shared.localRequest;
+			Object.defineProperty(xhr, 'responseText', { value: JSON.stringify(localResponse) });
+			const event = new ProgressEvent('loadend');
+			Object.defineProperty(event, 'target', { value: xhr });
+			onloadend.call(xhr, event);
+		}
+		return;
 	}
 	
 	let event: Maybe<ProgressEvent> = null;

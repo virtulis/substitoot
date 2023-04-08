@@ -30,7 +30,7 @@ function watchReduxStore(store: ReduxStore) {
 			const code = arg.toString();
 			if (code.includes('/api/v1/statuses/') && code.match(/`\/api\/v1\/statuses\/\$\{\w+}\/context`/)) {
 				dispatch.call(this, arg);
-				console.log('duplicated the context call');
+				// console.log('duplicated the context call');
 			}
 		}
 		
