@@ -102,14 +102,15 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 	for (const list of contextLists) for (const status of remoteResponse[list] as Status[]) {
 		
 		const { uri, account } = status;
+		const { remoteHost, remoteId, remoteReference } = identifyStatus(localHost, status);
 		
 		if (local.has(uri)) {
 			// console.log('got status', uri);
-			remapIds.set(status.id, local.get(uri)!.id);
+			const it = local.get(uri)!;
+			it.substitoot_fake_id = `s:s:${remoteHost}:${remoteId}`;
+			remapIds.set(status.id, it.id);
 			continue;
 		}
-		
-		const { remoteHost, remoteId, remoteReference } = identifyStatus(localHost, status);
 		
 		if (remoteHost == localHost) {
 			// console.log('local status', remoteId, uri);

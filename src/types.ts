@@ -39,12 +39,29 @@ export interface Thing {
 }
 
 export interface Status extends Thing {
+
 	uri: string;
 	account: Account;
 	content: string;
 	in_reply_to_id?: Maybe<string>;
 	in_reply_to_account_id?: Maybe<string>;
+	
 	application?: Maybe<{ name?: Maybe<string> }>;
+	
+	replies_count?: number;
+	reblogs_count?: number;
+	favourites_count?: number;
+	
+	substitoot_fake_id?: Maybe<string>;
+	
+}
+
+export interface StatusCounts {
+	updated: number;
+	localReference: string;
+	replies_count?: number;
+	reblogs_count?: number;
+	favourites_count?: number;
 }
 
 export interface Account extends Thing {
