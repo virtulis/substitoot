@@ -28,7 +28,7 @@ Toot content is returned from the API calls as HTML code. Content of remote toot
 ### Why it works like that
 
 * Should hopefully work with all modern Mastodon versions/forks. Could even be somewhat usable on instances you're not logged in to.
-* Does not inject any scripts at all (except for a `history.replaceState` call on navigation) and does not rely on DOM events.
+* Does not rely on DOM structure.
 * Serves as a demo of what Mastodon should just be doing out of the box, seriously.
 
 ## Building
