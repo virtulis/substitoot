@@ -6,6 +6,7 @@ import { provideNavigationRedirect } from '../remapping/navigation.js';
 import { maybe } from '../util.js';
 import { getSettings } from '../settings.js';
 import { APIRequest, APIResponse } from './api.js';
+import { host } from '../browsers/host.js';
 
 export const api = {
 	
@@ -29,7 +30,7 @@ export type APIMethod = keyof API;
 
 export function setUpAPIPort() {
 	
-	browser.runtime.onConnect.addListener(port => {
+	host.runtime.onConnect.addListener(port => {
 		
 		const url = maybe(port.sender?.url, s => new URL(s));
 		const valid = url ? getSettings().instances.includes(url.hostname) : true;

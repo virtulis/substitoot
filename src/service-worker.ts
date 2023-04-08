@@ -1,6 +1,5 @@
 // Entry point for the background process of the extension
 
-import { updateFirefoxEventHandlers } from './browsers/firefox.js';
 import { initSettings } from './settings.js';
 import { clearCache, clearMetadata, initStorage } from './storage.js';
 import { packageVersion } from './util.js';
@@ -8,6 +7,8 @@ import { packageVersion } from './util.js';
 import { maybeClearContextCache } from './remapping/context.js';
 import { setUpAPIPort } from './api/impl.js';
 import { host } from './browsers/host.js';
+
+import { updateChromeEventHandlers } from './browsers/chrome.js';
 
 let initRun = false;
 async function init() {
@@ -20,7 +21,7 @@ async function init() {
 	await initStorage();
 	setUpAPIPort();
 	
-	await initSettings(updateFirefoxEventHandlers).then(updateFirefoxEventHandlers);
+	await initSettings(updateChromeEventHandlers);
 	
 	await maybeClearContextCache();
 	

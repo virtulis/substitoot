@@ -15,7 +15,7 @@ import {
 import { getSettings } from '../settings.js';
 import { getStorage } from '../storage.js';
 import { identifyStatus } from './statuses.js';
-import * as DOMPurify from 'dompurify';
+import DOMPurify from 'dompurify';
 import { callApi } from '../instances/fetch.js';
 import { fetchInstanceInfo, setInstanceInfo } from '../instances/info.js';
 
@@ -172,7 +172,8 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 			accounts.set(acct, account);
 		}
 		
-		status.content = DOMPurify.sanitize(status.content);
+		// FIXME
+		// status.content = DOMPurify.sanitize(status.content);
 		
 		status.application = { name: 'Substitoot' };
 		

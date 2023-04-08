@@ -2,6 +2,7 @@
 
 import { computePermissions, defaultSettings, Settings } from './settings.js';
 import { reportAndNull } from './util.js';
+import { host } from './browsers/host.js';
 
 let settings = defaultSettings;
 const keys = Object.keys(settings) as Array<keyof Settings>;
@@ -35,7 +36,7 @@ function updateUI() {
 }
 
 async function load() {
-	const res = await browser.storage.sync.get('settings');
+	const res = await host.storage.sync.get('settings');
 	if (res.settings) settings = { ...settings, ...res.settings };
 	updateUI();
 	checkPermissions();
@@ -43,7 +44,7 @@ async function load() {
 
 async function save() {
 	const changed = Object.fromEntries(Object.entries(settings).filter(([k, v]) => v != defaultSettings[k as keyof Settings]));
-	await browser.storage.sync.set({ settings: changed });
+	await host.storage.sync.set({ settings: changed });
 	await checkPermissions();
 }
 
@@ -51,13 +52,13 @@ let requestingPermissions = false;
 
 async function checkPermissions() {
 	if (!settings.instances.length || requestingPermissions) return;
-	const havePerm = await browser.permissions.contains(computePermissions(settings.instances));
+	const havePerm = await host.permissions.contains(computePermissions(settings.instances));
 	document.getElementById('fixCtor')!.classList.toggle('visible', !havePerm);
 }
 
 async function requestPermissions() {
 	requestingPermissions = true;
-	await browser.permissions.request(computePermissions(settings.instances)).catch(reportAndNull);
+	await host.permissions.request(computePermissions(settings.instances)).catch(reportAndNull);
 	requestingPermissions = false;
 	await checkPermissions();
 }
@@ -69,7 +70,7 @@ for (const key of ['instances', 'skipInstances'] as const) {
 		).filter(val => !!val);
 		save();
 		// Not using optional permissions for now, hopefully temporary
-		// if (key == 'instances') requestPermissions();
+		if (key == 'instances') requestPermissions();
 	});
 }
 for (const key of ['cacheContentMins'] as const) {
@@ -89,11 +90,11 @@ for (const key of ['bypassFollowed', 'preloadHome', 'useRequestFilter'] as const
 
 document.getElementById('fixPermissions')!.addEventListener('click', requestPermissions);
 
-document.getElementById('clearCache')!.addEventListener('click', () => browser.runtime.sendMessage({ command: 'clearCache' }));
-document.getElementById('clearMetadata')!.addEventListener('click', () => browser.runtime.sendMessage({ command: 'clearMetadata' }));
+document.getElementById('clearCache')!.addEventListener('click', () => host.runtime.sendMessage({ command: 'clearCache' }));
+document.getElementById('clearMetadata')!.addEventListener('click', () => host.runtime.sendMessage({ command: 'clearMetadata' }));
 
-browser.storage.sync.onChanged.addListener(load);
-browser.permissions.onAdded.addListener(checkPermissions);
-browser.permissions.onRemoved.addListener(checkPermissions);
+host.storage.sync.onChanged.addListener(load);
+host.permissions.onAdded.addListener(checkPermissions);
+host.permissions.onRemoved.addListener(checkPermissions);
 
 load();

@@ -2,6 +2,7 @@
 
 import { omit } from './util.js';
 import { Maybe } from './types.js';
+import { host } from './browsers/host.js';
 
 export interface Settings {
 	
@@ -42,14 +43,14 @@ export function getSettings() {
 
 export async function reloadSettings() {
 	
-	let saved = await browser.storage.sync.get('settings').then(res => res.settings as Maybe<Partial<Settings>>);
+	let saved = await host.storage.sync.get('settings').then(res => res.settings as Maybe<Partial<Settings>>);
 	
 	// FIXME clean up old defaults dumbly saved as "settings"
 	if (saved && (saved.searchTimeout == 3_000 || saved.contextRequestTimeout == 2_000)) {
 		saved = omit(saved, ['statusRequestTimeout', 'contextRequestTimeout', 'searchTimeout']);
 		for (const key of Object.keys(saved) as (keyof Settings)[]) if (saved[key] == defaultSettings[key]) delete saved[key];
 		console.log({ saved });
-		await browser.storage.sync.set({ settings: saved });
+		await host.storage.sync.set({ settings: saved });
 	}
 	
 	if (saved) settings = { ...defaultSettings, ...saved };
@@ -58,12 +59,12 @@ export async function reloadSettings() {
 
 export async function initSettings(onChange: () => any) {
 
-	browser.storage.sync.onChanged.addListener(async changes => {
+	host.storage.sync.onChanged.addListener(async changes => {
 		if (!changes.settings) return;
 		await reloadSettings();
 		onChange();
 	});
-	browser.permissions.onAdded.addListener(onChange);
+	host.permissions.onAdded.addListener(onChange);
 	
 	await reloadSettings();
 	onChange();
@@ -72,11 +73,11 @@ export async function initSettings(onChange: () => any) {
 
 export function computePermissions(instances: string[]): browser.permissions.Permissions {
 	return {
-		// instances.map(host => `https://${host}/*`),
+		origins: instances.map(host => `https://${host}/*`),
 		permissions: [
 			
-			'webRequest',
-			'webRequestBlocking',
+			// 'webRequest',
+			// 'webRequestBlocking',
 			'webNavigation',
 			'scripting',
 			

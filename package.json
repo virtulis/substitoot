@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"build": "pnpm run build-scripts && pnpm run esbuild",
-		"esbuild": "pnpm exec esbuild --bundle --outdir=dist src/background.ts src/options.ts src/content.ts src/inject.ts",
+		"esbuild": "pnpm exec esbuild --format=esm --main-fields=module,main --bundle --outdir=dist src/background.ts src/service-worker.ts src/options.ts src/content.ts src/inject.ts",
 		"watch": "pnpm run esbuild --watch",
 		"render-readme": "cat README.md | grep -v '^# ' | pnpm exec marked > web/readme.html",
 		"build-scripts": "pnpm exec tsc -p scripts",

@@ -3,6 +3,8 @@ import { ContextResponse, isFullMapping, isLocalMapping, isRemoteMapping, Maybe,
 import { callSubstitoot } from './call.js';
 import { PatchedXHR } from './xhr.js';
 import { sleep } from '../util.js';
+import { contextLists } from '../remapping/context.js';
+import DOMPurify from 'dompurify';
 
 let curReqAt = 0;
 let curReqId: Maybe<string> = null;
@@ -126,6 +128,11 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 	if (!remoteResponse || !isRemoteMapping(mapping)) {
 		if (isSecondReq) onloadend.call(xhr, event);
 		return;
+	}
+	
+	// FIXME ?
+	for (const list of contextLists) for (const status of remoteResponse[list]) {
+		status.content = DOMPurify.sanitize(status.content);
 	}
 	
 	const merged = await callSubstitoot('mergeContextResponses', {

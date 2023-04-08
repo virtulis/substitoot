@@ -4,5 +4,7 @@
 import { wrapXHR } from './inject/xhr.js';
 import { observeForRedux } from './inject/redux.js';
 
+console.log('WRLD');
+
 wrapXHR();
 observeForRedux();

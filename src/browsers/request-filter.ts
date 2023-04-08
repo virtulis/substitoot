@@ -15,6 +15,7 @@ import { fetchContext, mergeContextResponses } from '../remapping/context.js';
 import { provideAccountMapping } from '../remapping/accounts.js';
 import { parseId } from '../remapping/ids.js';
 import { ownRequests } from '../instances/fetch.js';
+import { host } from './host.js';
 
 type RequestDetails = browser.webRequest._OnBeforeRequestDetails;
 type BlockingResponse = browser.webRequest.BlockingResponse;
@@ -27,7 +28,7 @@ export function wrapHandler(details: RequestDetails, handler: JSONHandlerFilter)
 	
 	console.log('handle', details.url);
 	
-	const filter = browser.webRequest.filterResponseData(details.requestId);
+	const filter = host.webRequest.filterResponseData(details.requestId);
 	const buffers: ArrayBuffer[] = [];
 	const decoder = new TextDecoder('utf-8');
 	
@@ -55,7 +56,7 @@ export function wrapRewriter(details: RequestDetails, rewriter: JSONRewriterFilt
 	
 	console.log('rewrite', details.url);
 	
-	const filter = browser.webRequest.filterResponseData(details.requestId);
+	const filter = host.webRequest.filterResponseData(details.requestId);
 	const buffers: ArrayBuffer[] = [];
 	const decoder = new TextDecoder('utf-8');
 	const encoder = new TextEncoder();
