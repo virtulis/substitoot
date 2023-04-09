@@ -18,9 +18,7 @@ import { identifyStatus } from './statuses.js';
 import DOMPurify from 'dompurify';
 import { callApi } from '../instances/fetch.js';
 import { fetchInstanceInfo, setInstanceInfo } from '../instances/info.js';
-
-export const contextLists = ['ancestors', 'descendants'] as const;
-export const remapIdFields = ['in_reply_to_id', 'in_reply_to_account_id'] as const;
+import { contextLists, remapIdFields } from './ids.js';
 
 export async function mergeContextResponses({ localHost, mapping, localResponse, remoteResponse }: {
 	localHost: string;
@@ -102,14 +100,15 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 	for (const list of contextLists) for (const status of remoteResponse[list] as Status[]) {
 		
 		const { uri, account } = status;
+		const { remoteHost, remoteId, remoteReference } = identifyStatus(localHost, status);
 		
 		if (local.has(uri)) {
 			// console.log('got status', uri);
-			remapIds.set(status.id, local.get(uri)!.id);
+			const it = local.get(uri)!;
+			it.substitoot_fake_id = `s:s:${remoteHost}:${remoteId}`;
+			remapIds.set(status.id, it.id);
 			continue;
 		}
-		
-		const { remoteHost, remoteId, remoteReference } = identifyStatus(localHost, status);
 		
 		if (remoteHost == localHost) {
 			// console.log('local status', remoteId, uri);

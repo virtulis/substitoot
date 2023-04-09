@@ -1,6 +1,6 @@
 {
 	"name": "substitoot",
-	"version": "0.4.2",
+	"version": "0.5.0",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -11,7 +11,7 @@
 		"build-scripts": "pnpm exec tsc -p scripts",
 		"update-web": "pnpm run render-readme && node scripts/update-web.js",
 		"build-web": "pnpm run build-scripts && cp node_modules/sanitize.css/sanitize.css web/ && pnpm run update-web",
-		"package": "pnpm run build && web-ext build --ignore-files src web *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml"
+		"package": "pnpm run build && web-ext build --ignore-files src web scripts *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml"
 	},
 	"devDependencies": {
 		"@types/firefox-webext-browser": "^111.0.0",

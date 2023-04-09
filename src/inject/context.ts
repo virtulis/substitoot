@@ -1,9 +1,17 @@
-import { parseId } from '../remapping/ids.js';
-import { ContextResponse, isFullMapping, isLocalMapping, isRemoteMapping, Maybe, StatusMapping } from '../types.js';
+import { contextLists, parseId } from '../remapping/ids.js';
+import {
+	ContextResponse,
+	isFullMapping,
+	isLocalMapping,
+	isRemoteMapping,
+	Maybe,
+	RemoteMapping,
+	StatusMapping,
+} from '../types.js';
 import { callSubstitoot } from './call.js';
 import { PatchedXHR } from './xhr.js';
-import { sleep } from '../util.js';
-import { contextLists } from '../remapping/context.js';
+import { reportAndNull, sleep } from '../util.js';
+import { cleanUpFakeStatuses, updateRemoteStatus } from './redux.js';
 import DOMPurify from 'dompurify';
 
 let curReqAt = 0;
@@ -48,7 +56,17 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 	// console.log(mapping);
 	
 	if (mapping.remoteHost == mapping.localHost) {
-		return xhr.__send();
+		if (!isSecondReq) {
+			xhr.__send();
+		}
+		else {
+			const localResponse = await shared.localRequest;
+			Object.defineProperty(xhr, 'responseText', { value: JSON.stringify(localResponse) });
+			const event = new ProgressEvent('loadend');
+			Object.defineProperty(event, 'target', { value: xhr });
+			onloadend.call(xhr, event);
+		}
+		return;
 	}
 	
 	let event: Maybe<ProgressEvent> = null;
@@ -66,10 +84,8 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		}
 		else {
 			const url = `/${parts.map(p => p == id ? mapping.localId : p).join('/')}`;
-			console.log(url);
 			actual = new XMLHttpRequest() as PatchedXHR;
 			actual.open(xhr.__method, url);
-			console.log(xhr.__headers);
 			for (const [name, value] of Object.entries(xhr.__headers)) actual.setRequestHeader(name, value);
 		}
 		
@@ -111,6 +127,10 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		if (!isRemoteMapping(mapping)) mapping = (await shared.fullMappingRequest) ?? mapping;
 		if (!isRemoteMapping(mapping)) return;
 		
+		callSubstitoot('fetchStatusCounts', mapping.remoteHost, mapping.remoteId)
+			.then(res => res && updateRemoteStatus(mapping as RemoteMapping, res))
+			.catch(reportAndNull);
+		
 		return await callSubstitoot('fetchContext', mapping);
 		
 	})();
@@ -146,5 +166,8 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 	
 	Object.defineProperty(xhr, 'responseText', { value: JSON.stringify(merged) });
 	onloadend.call(xhr, event);
+	
+	const cleanUpIds = contextLists.flatMap(list => merged[list].filter(s => s.substitoot_fake_id).map(s => ({ realId: s.id, fakeId: s.substitoot_fake_id! })));
+	if (cleanUpIds.length) cleanUpFakeStatuses(cleanUpIds);
 	
 }

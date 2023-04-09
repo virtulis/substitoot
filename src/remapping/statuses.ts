@@ -9,11 +9,12 @@ import {
 	Maybe,
 	RemoteMapping,
 	Status,
+	StatusCounts,
 	StatusMapping,
 } from '../types.js';
 import { getStorage } from '../storage.js';
 import { v3 as murmurhash } from 'murmurhash';
-import { ActiveRequestMap, reportAndNull } from '../util.js';
+import { ActiveRequestMap, pick, reportAndNull } from '../util.js';
 import { getSettings } from '../settings.js';
 import { callApi } from '../instances/fetch.js';
 
@@ -73,13 +74,21 @@ export async function processStatusJSON(localHost: string, status: Status, save 
 		if (isRemoteMapping(mapping)) await getStorage().put('remoteStatusMapping', mapping);
 	}
 	
-	return { mapping, status };
+	const counts: Maybe<StatusCounts> = localHost == remoteHost ? {
+		...pick(status, ['replies_count', 'reblogs_count', 'favourites_count']),
+		localReference,
+		updated: Date.now(),
+	} : null;
+	if (counts) await getStorage().put('localStatusCounts', counts);
+	
+	return { mapping, status, counts };
 	
 }
 
 export type StatusResult = Maybe<{
 	mapping: StatusMapping;
 	status: Maybe<Status>;
+	counts?: Maybe<StatusCounts>;
 }>;
 export const statusRequests = new ActiveRequestMap<StatusResult>({ timeout: getSettings().statusRequestTimeout });
 
@@ -93,6 +102,23 @@ export async function fetchStatus(hostname: string, id: string) {
 			.then(json => processStatusJSON(hostname, json))
 			.catch(reportAndNull),
 	);
+}
+
+export async function fetchStatusCounts(hostname: string, id: string) {
+
+	const localReference = `${hostname}:${id}`;
+
+	const counts = await getStorage().get('localStatusCounts', localReference);
+	if (counts && Date.now() - counts.updated < 600_000) return counts;
+	
+	const res = await fetchStatus(hostname, id);
+	if (!res?.counts) await getStorage().put('localStatusCounts', {
+		localReference,
+		updated: Date.now(),
+	});
+	
+	return res?.counts;
+	
 }
 
 export async function provideStatusMapping(known: MappingData, timeout = getSettings().searchTimeout): Promise<Maybe<StatusResult>> {

@@ -1,5 +1,11 @@
 import { fetchInstanceInfo } from '../instances/info.js';
-import { fetchStatus, getStatusMapping, processStatusJSON, provideStatusMapping } from '../remapping/statuses.js';
+import {
+	fetchStatus,
+	fetchStatusCounts,
+	getStatusMapping,
+	processStatusJSON,
+	provideStatusMapping,
+} from '../remapping/statuses.js';
 import { fetchContext, mergeContextResponses } from '../remapping/context.js';
 import { provideAccountMapping } from '../remapping/accounts.js';
 import { provideNavigationRedirect } from '../remapping/navigation.js';
@@ -16,6 +22,7 @@ export const api = {
 	getStatusMapping,
 	provideStatusMapping,
 	processStatusJSON,
+	fetchStatusCounts,
 	
 	fetchContext,
 	mergeContextResponses,

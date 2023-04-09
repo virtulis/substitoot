@@ -8,6 +8,7 @@ import {
 	isLocalMapping,
 	LocalMapping,
 	RemoteMapping,
+	StatusCounts,
 	StatusMapping,
 } from './types.js';
 
@@ -28,6 +29,10 @@ export interface Storage extends DBSchema {
 			context: ContextResponse;
 		};
 	};
+	localStatusCounts: {
+		key: string;
+		value: StatusCounts;
+	};
 	instances: {
 		key: string;
 		value: InstanceInfo;
@@ -45,7 +50,7 @@ export interface Storage extends DBSchema {
 let db: IDBPDatabase<Storage>;
 
 export async function initStorage() {
-	db = await openDB<Storage>('substitoot', 4_03_04, {
+	db = await openDB<Storage>('substitoot', 5_00_02, {
 		upgrade: async (db, v, _nv, tx) => {
 		
 			const now = Date.now();
@@ -78,6 +83,8 @@ export async function initStorage() {
 			if (v < 4_03_01) for (const store of ['localStatusMapping', 'remoteStatusMapping'] as const) for await (const entry of tx.objectStore(store).iterate()) {
 				await entry.update({ ...entry.value, updated: now });
 			}
+			
+			if (v < 5_00_02) db.createObjectStore('localStatusCounts', { keyPath: 'localReference' } );
 			
 		},
 	});

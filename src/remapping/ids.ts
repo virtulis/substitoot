@@ -19,3 +19,6 @@ export function parseId(localHost: string, id: string): Maybe<MappingData> {
 		remoteId: decodeURIComponent(match[3]).replace(/^@/, ''),
 	};
 }
+
+export const contextLists = ['ancestors', 'descendants'] as const;
+export const remapIdFields = ['in_reply_to_id', 'in_reply_to_account_id'] as const;
