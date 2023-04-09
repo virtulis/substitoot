@@ -1,19 +1,42 @@
 # Substitoot — a transparent toot fetcher
 
-A Firefox extension that loads *all* replies to toots from remote instances.
+Mastodon often fails to show up-to-date context and information on posts from remote instances. This addon does that properly.
+
+* See all the replies to any post on your home instance. Local and remote replies are now loaded in parallel so there is no extra delay.
+* Interact with all the remote posts as normal. They will be fetched to your instance as needed.
+* See up-to-date boost/favorite counts on posts.
+
+It should work reliably on mainline Mastodon versions 4.0 and up, your mileage may vary for older instances or forks.
 
 ## Installation
 
-Install the latest release from [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/substitoot/).
+* Firefox: install the latest release from [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/substitoot/).
+* Chrome version is coming within a week, @ me to know when!
+* Android: installing addons is possible with [Firefox Nightly](https://play.google.com/store/apps/details?id=org.mozilla.fenix) and [Fennec F-Droid](https://f-droid.org/en/packages/org.mozilla.fennec_fdroid/). It's [somewhat cumbersome](https://www.maketecheasier.com/install-addon-firefox-android/) but it does work.
 
-## TODO
+Make sure to open the addon settings and type in the instances it should be active on!
 
-- Bypass remote toots by followed users (unless you followed them after that toot).
-- Load old toots in user profiles.
-- Preload context in advance for boosted toots in your timeline.
-- Chrome support?
+## Questions and answers
 
-## How it works
+### Why do you want to "access my data on all websites"?
+
+The extension is provided both for desktop and mobile versions of Firefox, and it doesn't seem to support requesting permissions at runtime on Android.
+
+I'll see if I can upload separate builds, then on desktop it will ask for permissions as needed. Rest assured it does not do anything on the domains you haven't listed.
+
+Well, except for the requests to the other instances to fetch things.
+
+### Does this support servers other than Mastodon?
+
+Not yet. Currently, I use only the Mastodon-specific API both locally and remotely, and the responses I get from the remote instances are passed on to the Web UI mostly unchanged.
+
+Adding support for either ActivityPub itself, or other specific software, will require a translation layer.
+
+Pleroma/Akkoma have a similar API, so adding those is in the nearest plans. Other AP implementations will require more work, and assistance is very welcome!
+
+Also, in any case, fetching this information requires that it be publicly accessible in the first place. Some instances do not seem to publicly provide post context in any form.
+
+### How does this work internally?
 
 The extension intercepts certain mastodon API HTTP requests on the selected instances.
 
@@ -23,13 +46,19 @@ If a remote response is successfully received, it appends any toots that are mis
 
 If you click on a toot with a fake ID, the extension will try to intercept it and fetch the toot properly this time (via your instance's search function). This only works if you are logged in.
 
-Toot content is returned from the API calls as HTML code. Content of remote toots is passed through an HTML sanitizer in hopes that this will prevent any potential XSS *(in case someone really hates this extension!)*.
+Since version 0.5, the interception is done by injecting a wrapper around XMLHttpRequest, since that provides more flexibility.
 
-### Why it works like that
+I also attempt to gain access to the Redux store used by the web UI. Since everything is webpacked and minified this is actually the easiest way to interact with the app.
 
-* Should hopefully work with all modern Mastodon versions/forks. Could even be somewhat usable on instances you're not logged in to.
-* Does not rely on DOM structure.
-* Serves as a demo of what Mastodon should just be doing out of the box, seriously.
+The parallel context loading is done by, first, intercepting a dispatched context request at the Redux store level, then dispatching the same identical for request a second time, figuring out which one is which when both are intercepted, and then handling them differently in parallel. The code for this looks absolutely ridiculous.
+
+### Is it secure?
+
+Toot content is returned from the API calls as HTML code. Content of remote toots is passed through an HTML sanitizer to prevent any potential XSS.
+
+Additionally, Mastodon has a strict Content-Security-Policy set by default, including no inline scripts.
+
+So, *I think it's secure enough*?
 
 ## Building
 	
