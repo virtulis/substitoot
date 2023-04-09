@@ -8,10 +8,10 @@ window.addEventListener('message', ev => {
 	if (ev.source != window) return;
 	if (!ev.data.substitootResponse?.id) return;
 	const response = ev.data.substitootResponse as APIResponse;
-	// console.log(response);
 	const { resolve, reject } = requests.get(response.id)!;
 	if (response.error) reject(new window.Error(response.error));
 	else resolve(response.result);
+	requests.delete(response.id);
 });
 
 export function callSubstitoot<M extends APIMethod>(method: M, ...args: Parameters<API[M]>) {
