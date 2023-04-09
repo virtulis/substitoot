@@ -11,7 +11,10 @@
 		"build-scripts": "pnpm exec tsc -p scripts",
 		"update-web": "pnpm run render-readme && node scripts/update-web.js",
 		"build-web": "pnpm run build-scripts && cp node_modules/sanitize.css/sanitize.css web/ && pnpm run update-web",
-		"package": "pnpm run build && web-ext build --ignore-files src web scripts *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml"
+		"use-firefox": "rm -f manifest.json ; ln -s manifest-v3.json manifest.json",
+		"use-chrome": "rm -f manifest.json ; ln -s manifest-v3.json manifest.json",
+		"package-firefox": "pnpm run build && web-ext build --ignore-files src web scripts *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml dist/service-worker.js",
+		"package-chrome": "pnpm run build && web-ext build --ignore-files src web scripts *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml dist/background.js"
 	},
 	"devDependencies": {
 		"@types/firefox-webext-browser": "^111.0.0",

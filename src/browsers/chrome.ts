@@ -1,45 +1,32 @@
 import { host } from './host.js';
 import { getSettings } from '../settings.js';
-import { reportAndNull } from '../util.js';
-import { Maybe } from '../types.js';
-import { historyListener, navigationListener } from './navigation.js';
 
-const { webNavigation, scripting, runtime } = host;
-
-export function updateChromeEventHandlers() {
+export async function updateContentScript() {
 	
-	const settings = getSettings();
+	const { instances } = getSettings();
+	const { scripting } = host;
 	
-	webNavigation.onCompleted.removeListener(navigationListener);
-	webNavigation.onHistoryStateUpdated.removeListener(historyListener);
+	const ex = await scripting.getRegisteredContentScripts({ ids: ['content'] });
 	
-	if (settings.instances.length) {
-		
-		webNavigation.onCompleted.addListener(navigationListener, {
-			url: settings.instances.map(host => ({
-				hostEquals: host,
-				pathPrefix: '/@',
-				pathContains: '/s:',
-			})),
-		});
-		webNavigation.onHistoryStateUpdated.addListener(historyListener, {
-			url: settings.instances.map(host => ({
-				hostEquals: host,
-				pathPrefix: '/@',
-				pathContains: '/s:',
-			})),
-		});
-		
-		scripting.registerContentScripts([
-			{
-				id: 'content',
-				js: ['dist/content.js'],
-				matches: settings.instances.map(host => `https://${host}/*`),
-				runAt: 'document_end',
-				persistAcrossSessions: false,
-			},
-		]);
-		
+	if (!instances.length) {
+		if (ex.length) await scripting.unregisterContentScripts({ ids: ['content'] });
+		return;
 	}
+	
+	if (!ex.length) await scripting.registerContentScripts([
+		{
+			id: 'content',
+			js: ['dist/content.js'],
+			matches: getSettings().instances.map(host => `https://${host}/*`),
+			runAt: 'document_end',
+			persistAcrossSessions: false,
+		},
+	]);
+	else await scripting.updateContentScripts([
+		{
+			id: 'content',
+			matches: getSettings().instances.map(host => `https://${host}/*`),
+		},
+	]);
 	
 }

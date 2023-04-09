@@ -22,7 +22,8 @@
 		"browser_style": true
 	},
 	"background": {
-		"service_worker": "dist/service-worker.js"
+		"service_worker": "dist/service-worker.js",
+		"type": "module"
 	},
 	"web_accessible_resources": [
 		{

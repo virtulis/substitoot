@@ -20,7 +20,7 @@ async function init() {
 	await initStorage();
 	setUpAPIPort();
 	
-	await initSettings(updateFirefoxEventHandlers).then(updateFirefoxEventHandlers);
+	await initSettings(updateFirefoxEventHandlers);
 	
 	await maybeClearContextCache();
 	

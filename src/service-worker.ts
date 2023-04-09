@@ -7,21 +7,15 @@ import { packageVersion } from './util.js';
 import { maybeClearContextCache } from './remapping/context.js';
 import { setUpAPIPort } from './api/impl.js';
 import { host } from './browsers/host.js';
+import { updateContentScript } from './browsers/chrome.js';
 
-import { updateChromeEventHandlers } from './browsers/chrome.js';
-
-let initRun = false;
 async function init() {
-
-	if (initRun) return;
-	initRun = true;
 	
 	console.log('init', packageVersion);
 	
 	await initStorage();
-	setUpAPIPort();
 	
-	await initSettings(updateChromeEventHandlers);
+	await initSettings(updateContentScript);
 	
 	await maybeClearContextCache();
 	
@@ -40,3 +34,5 @@ host.runtime.onMessage.addListener(async (message) => {
 		await clearMetadata();
 	}
 });
+
+setUpAPIPort();
