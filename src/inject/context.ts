@@ -1,4 +1,4 @@
-import { parseId } from '../remapping/ids.js';
+import { contextLists, parseId } from '../remapping/ids.js';
 import {
 	ContextResponse,
 	isFullMapping,
@@ -11,7 +11,6 @@ import {
 import { callSubstitoot } from './call.js';
 import { PatchedXHR } from './xhr.js';
 import { reportAndNull, sleep } from '../util.js';
-import { contextLists } from '../remapping/context.js';
 import { cleanUpFakeStatuses, updateRemoteStatus } from './redux.js';
 
 let curReqAt = 0;

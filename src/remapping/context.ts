@@ -18,9 +18,7 @@ import { identifyStatus } from './statuses.js';
 import * as DOMPurify from 'dompurify';
 import { callApi } from '../instances/fetch.js';
 import { fetchInstanceInfo, setInstanceInfo } from '../instances/info.js';
-
-export const contextLists = ['ancestors', 'descendants'] as const;
-export const remapIdFields = ['in_reply_to_id', 'in_reply_to_account_id'] as const;
+import { contextLists, remapIdFields } from './ids.js';
 
 export async function mergeContextResponses({ localHost, mapping, localResponse, remoteResponse }: {
 	localHost: string;
