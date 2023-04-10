@@ -1,6 +1,6 @@
 // Browser navigation handling logic (actual event handlers elsewhere)
 
-import { parseId } from './ids.js';
+import { parseId } from '../ids.js';
 import { provideStatusMapping } from './statuses.js';
 
 export async function provideNavigationRedirect(url: string) {

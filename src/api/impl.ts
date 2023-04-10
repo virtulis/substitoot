@@ -10,9 +10,10 @@ import { fetchContext, mergeContextResponses } from '../remapping/context.js';
 import { provideAccountMapping } from '../remapping/accounts.js';
 import { provideNavigationRedirect } from '../remapping/navigation.js';
 import { maybe } from '../util.js';
-import { getSettings } from '../settings.js';
+import { provideSettings } from '../settings.js';
 import { APIRequest, APIResponse } from './api.js';
-import { host } from '../browsers/host.js';
+import { asFirefox } from '../browsers/any.js';
+import { provideStorage } from '../storage.js';
 
 export const api = {
 	
@@ -37,18 +38,20 @@ export type APIMethod = keyof API;
 
 export function setUpAPIPort() {
 	
-	host.runtime.onConnect.addListener(port => {
-		
-		const url = maybe(port.sender?.url, s => new URL(s));
-		const valid = url ? getSettings().instances.includes(url.hostname) : true;
+	asFirefox.runtime.onConnect.addListener(async port => {
 		
 		port.onMessage.addListener(async msg => {
+			
+			await provideStorage();
+			const settings = await provideSettings();
+			const url = maybe(port.sender?.url, s => new URL(s));
+			const valid = url ? settings.instances.includes(url.hostname) : true;
 			
 			const request = msg as APIRequest;
 			
 			if (!valid) port.postMessage(<APIResponse> {
 				id: request.id,
-				error: `Requests are not allowed from: ${url}`,
+				error: `Requests are not allowed from: ${url?.hostname}`,
 			});
 			
 			try {

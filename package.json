@@ -11,12 +11,13 @@
 		"build-scripts": "pnpm exec tsc -p scripts",
 		"update-web": "pnpm run render-readme && node scripts/update-web.js",
 		"build-web": "pnpm run build-scripts && cp node_modules/sanitize.css/sanitize.css web/ && pnpm run update-web",
-		"use-firefox": "rm -f manifest.json ; ln -s manifest-v3.json manifest.json",
-		"use-chrome": "rm -f manifest.json ; ln -s manifest-v3.json manifest.json",
-		"package-firefox": "pnpm run build && web-ext build --ignore-files src web scripts *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml dist/service-worker.js",
-		"package-chrome": "pnpm run build && web-ext build --ignore-files src web scripts *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml dist/background.js"
+		"use-mv2": "rm -f manifest.json ; ln -s manifest-v2.json manifest.json",
+		"use-mv3": "rm -f manifest.json ; ln -s manifest-v3.json manifest.json",
+		"package-mv2": "pnpm run use-mv2 && pnpm run build && web-ext build --ignore-files src web scripts *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml dist/service-worker.js",
+		"package-mv3": "pnpm run use-mv2 && pnpm run build && web-ext build --ignore-files src web scripts *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml dist/background.js"
 	},
 	"devDependencies": {
+		"@types/chrome": "^0.0.228",
 		"@types/firefox-webext-browser": "^111.0.0",
 		"@types/node": "^18.15.3",
 		"@typescript-eslint/eslint-plugin": "^5.54.1",

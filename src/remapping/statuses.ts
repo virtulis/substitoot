@@ -90,7 +90,7 @@ export type StatusResult = Maybe<{
 	status: Maybe<Status>;
 	counts?: Maybe<StatusCounts>;
 }>;
-export const statusRequests = new ActiveRequestMap<StatusResult>({ timeout: getSettings().statusRequestTimeout });
+export const statusRequests = new ActiveRequestMap<StatusResult>({ timeout: () => getSettings().statusRequestTimeout });
 
 export async function fetchStatus(hostname: string, id: string) {
 	const key = `${hostname}:${id}`;

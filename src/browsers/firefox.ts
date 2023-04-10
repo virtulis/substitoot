@@ -5,15 +5,14 @@ import { beforeRequestListener, getWebRequestFilter } from './request-filter.js'
 import { getSettings } from '../settings.js';
 import { reportAndNull } from '../util.js';
 import { Maybe } from '../types.js';
-import { host } from './host.js';
 import { historyListener, navigationListener } from './navigation.js';
 
 let settingsOpenedOnce = false;
 let contentScript: Maybe<browser.contentScripts.RegisteredContentScript>;
 
-export async function updateFirefoxEventHandlers() {
+export async function updateFirefoxConfig() {
 	
-	const { webNavigation, webRequest, contentScripts, runtime } = host;
+	const { webNavigation, webRequest, contentScripts, runtime } = browser;
 	
 	if (!webNavigation) {
 		console.error('permissions broken');

@@ -2,7 +2,7 @@
 
 import { omit } from './util.js';
 import { Maybe } from './types.js';
-import { host } from './browsers/host.js';
+import { anyBrowser } from './browsers/any.js';
 
 export interface Settings {
 	
@@ -18,6 +18,7 @@ export interface Settings {
 	statusRequestTimeout: number;
 	contextRequestTimeout: number;
 	searchTimeout: number;
+	instanceCheckTimeout: number;
 	
 }
 
@@ -33,40 +34,50 @@ export const defaultSettings: Settings = {
 	statusRequestTimeout: 5_000,
 	contextRequestTimeout: 10_000,
 	searchTimeout: 10_000,
+	instanceCheckTimeout: 5_000,
 	
 };
-let settings = defaultSettings;
+
+let settings: Maybe<Settings> = null;
+let settingsLoaded: Maybe<Promise<void>> = null;
 
 export function getSettings() {
+	if (!settings) throw new Error('Settings not loaded');
 	return settings;
+}
+
+export async function provideSettings() {
+	if (!settingsLoaded) settingsLoaded = reloadSettings();
+	await settingsLoaded;
+	return getSettings();
 }
 
 export async function reloadSettings() {
 	
-	let saved = await host.storage.sync.get('settings').then(res => res.settings as Maybe<Partial<Settings>>);
+	let saved = await anyBrowser.storage.sync.get('settings').then(res => res.settings as Maybe<Partial<Settings>>);
 	
 	// FIXME clean up old defaults dumbly saved as "settings"
 	if (saved && (saved.searchTimeout == 3_000 || saved.contextRequestTimeout == 2_000)) {
 		saved = omit(saved, ['statusRequestTimeout', 'contextRequestTimeout', 'searchTimeout']);
 		for (const key of Object.keys(saved) as (keyof Settings)[]) if (saved[key] == defaultSettings[key]) delete saved[key];
 		console.log({ saved });
-		await host.storage.sync.set({ settings: saved });
+		await anyBrowser.storage.sync.set({ settings: saved });
 	}
 	
-	if (saved) settings = { ...defaultSettings, ...saved };
+	settings = { ...defaultSettings, ...saved };
 	
 }
 
 export async function initSettings(onChange: () => any) {
 
-	host.storage.sync.onChanged.addListener(async changes => {
+	anyBrowser.storage.sync.onChanged.addListener(async changes => {
 		if (!changes.settings) return;
 		await reloadSettings();
 		onChange();
 	});
-	host.permissions.onAdded.addListener(onChange);
+	anyBrowser.permissions.onAdded.addListener(onChange);
 	
-	await reloadSettings();
+	await provideSettings();
 	onChange();
 	
 }

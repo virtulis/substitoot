@@ -1,6 +1,6 @@
 // Telling apart fake IDs from real IDs and not-IDs-at-all
 
-import { MappingData, Maybe } from '../types.js';
+import { MappingData, Maybe } from './types.js';
 
 export function parseId(localHost: string, id: string): Maybe<MappingData> {
 	const match = id.match(/^s:(.):([^:/]+):([^:/]+)$/);

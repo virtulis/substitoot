@@ -6,8 +6,8 @@ import { packageVersion } from './util.js';
 
 import { maybeClearContextCache } from './remapping/context.js';
 import { setUpAPIPort } from './api/impl.js';
-import { host } from './browsers/host.js';
-import { updateContentScript } from './browsers/chrome.js';
+import { asChrome } from './browsers/any.js';
+import { updateChromeConfig } from './browsers/chrome.js';
 
 async function init() {
 	
@@ -15,16 +15,16 @@ async function init() {
 	
 	await initStorage();
 	
-	await initSettings(updateContentScript);
+	await initSettings(updateChromeConfig);
 	
 	await maybeClearContextCache();
 	
 }
 
-host.runtime.onStartup.addListener(init);
-host.runtime.onInstalled.addListener(init);
+asChrome.runtime.onStartup.addListener(init);
+asChrome.runtime.onInstalled.addListener(init);
 
-host.runtime.onMessage.addListener(async (message) => {
+asChrome.runtime.onMessage.addListener(async (message) => {
 	if (typeof message != 'object') return;
 	const command: string = message.command;
 	if (command == 'clearCache') {

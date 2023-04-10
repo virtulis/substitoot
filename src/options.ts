@@ -2,7 +2,7 @@
 
 import { computePermissions, defaultSettings, Settings } from './settings.js';
 import { reportAndNull } from './util.js';
-import { host } from './browsers/host.js';
+import { anyBrowser, asChrome } from './browsers/any.js';
 
 let settings = defaultSettings;
 const keys = Object.keys(settings) as Array<keyof Settings>;
@@ -36,7 +36,7 @@ function updateUI() {
 }
 
 async function load() {
-	const res = await host.storage.sync.get('settings');
+	const res = await anyBrowser.storage.sync.get('settings');
 	if (res.settings) settings = { ...settings, ...res.settings };
 	updateUI();
 	checkPermissions();
@@ -44,7 +44,7 @@ async function load() {
 
 async function save() {
 	const changed = Object.fromEntries(Object.entries(settings).filter(([k, v]) => v != defaultSettings[k as keyof Settings]));
-	await host.storage.sync.set({ settings: changed });
+	await anyBrowser.storage.sync.set({ settings: changed });
 	await checkPermissions();
 }
 
@@ -52,13 +52,13 @@ let requestingPermissions = false;
 
 async function checkPermissions() {
 	if (!settings.instances.length || requestingPermissions) return;
-	const havePerm = await host.permissions.contains(computePermissions(settings.instances));
+	const havePerm = await anyBrowser.permissions.contains(computePermissions(settings.instances));
 	document.getElementById('fixCtor')!.classList.toggle('visible', !havePerm);
 }
 
 async function requestPermissions() {
 	requestingPermissions = true;
-	await host.permissions.request(computePermissions(settings.instances)).catch(reportAndNull);
+	await anyBrowser.permissions.request(computePermissions(settings.instances)).catch(reportAndNull);
 	requestingPermissions = false;
 	await checkPermissions();
 }
@@ -90,11 +90,11 @@ for (const key of ['bypassFollowed', 'preloadHome', 'useRequestFilter'] as const
 
 document.getElementById('fixPermissions')!.addEventListener('click', requestPermissions);
 
-document.getElementById('clearCache')!.addEventListener('click', () => host.runtime.sendMessage({ command: 'clearCache' }));
-document.getElementById('clearMetadata')!.addEventListener('click', () => host.runtime.sendMessage({ command: 'clearMetadata' }));
+document.getElementById('clearCache')!.addEventListener('click', () => asChrome.runtime.sendMessage({ command: 'clearCache' }));
+document.getElementById('clearMetadata')!.addEventListener('click', () => asChrome.runtime.sendMessage({ command: 'clearMetadata' }));
 
-host.storage.sync.onChanged.addListener(load);
-host.permissions.onAdded.addListener(checkPermissions);
-host.permissions.onRemoved.addListener(checkPermissions);
+asChrome.storage.sync.onChanged.addListener(load);
+asChrome.permissions.onAdded.addListener(checkPermissions);
+asChrome.permissions.onRemoved.addListener(checkPermissions);
 
 load();

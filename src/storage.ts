@@ -7,6 +7,7 @@ import {
 	InstanceInfo,
 	isLocalMapping,
 	LocalMapping,
+	Maybe,
 	RemoteMapping,
 	StatusCounts,
 	StatusMapping,
@@ -48,9 +49,10 @@ export interface Storage extends DBSchema {
 }
 
 let db: IDBPDatabase<Storage>;
+let dbLoaded: Maybe<Promise<IDBPDatabase<Storage>>> = null;
 
 export async function initStorage() {
-	db = await openDB<Storage>('substitoot', 5_00_02, {
+	dbLoaded = openDB<Storage>('substitoot', 5_00_02, {
 		upgrade: async (db, v, _nv, tx) => {
 		
 			const now = Date.now();
@@ -88,9 +90,17 @@ export async function initStorage() {
 			
 		},
 	});
+	db = await dbLoaded;
+}
+
+export async function provideStorage() {
+	if (!dbLoaded) await initStorage();
+	await dbLoaded;
+	return getStorage();
 }
 
 export function getStorage() {
+	if (!db) throw new Error('Storage not ready');
 	return db;
 }
 

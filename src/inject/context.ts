@@ -1,4 +1,4 @@
-import { contextLists, parseId } from '../remapping/ids.js';
+import { contextLists, parseId } from '../ids.js';
 import {
 	ContextResponse,
 	isFullMapping,
@@ -105,7 +105,7 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 					console.error(actual.status);
 					resolve(null);
 				}
-				onloadend.call(actual, ev);
+				if (haveSecondReq) onloadend.call(actual, ev);
 			};
 			actual.onerror = (ev) => {
 				resolve(null);
@@ -146,7 +146,7 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 	}
 	
 	if (!remoteResponse || !isRemoteMapping(mapping)) {
-		if (isSecondReq) onloadend.call(xhr, event);
+		onloadend.call(xhr, event);
 		return;
 	}
 	
@@ -167,7 +167,7 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 	Object.defineProperty(xhr, 'responseText', { value: JSON.stringify(merged) });
 	onloadend.call(xhr, event);
 	
-	const cleanUpIds = contextLists.flatMap(list => merged[list].filter(s => s.substitoot_fake_id).map(s => ({ realId: s.id, fakeId: s.substitoot_fake_id! })));
+	const cleanUpIds = merged.descendants.filter(s => s.substitoot_fake_id).map(s => ({ realId: s.id, fakeId: s.substitoot_fake_id! }));
 	if (cleanUpIds.length) cleanUpFakeStatuses(cleanUpIds);
 	
 }

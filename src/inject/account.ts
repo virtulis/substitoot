@@ -1,5 +1,5 @@
 import { PatchedXHR, swapInXHR } from './xhr.js';
-import { parseId } from '../remapping/ids.js';
+import { parseId } from '../ids.js';
 import { isLocalMapping, isRemoteMapping } from '../types.js';
 import { callSubstitoot } from './call.js';
 

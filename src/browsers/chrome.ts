@@ -1,32 +1,32 @@
-import { host } from './host.js';
-import { getSettings } from '../settings.js';
+import { provideSettings, Settings } from '../settings.js';
+import { Maybe } from '../types.js';
 
-export async function updateContentScript() {
+export async function updateChromeConfig() {
 	
-	const { instances } = getSettings();
-	const { scripting } = host;
+	const { scripting, storage } = chrome;
 	
-	const ex = await scripting.getRegisteredContentScripts({ ids: ['content'] });
+	const lastSettings = await storage.sync.get('lastSettings').then(res => res.lastSettings as Maybe<Partial<Settings>>);
 	
-	if (!instances.length) {
-		if (ex.length) await scripting.unregisterContentScripts({ ids: ['content'] });
-		return;
-	}
+	const { instances } = await provideSettings();
 	
-	if (!ex.length) await scripting.registerContentScripts([
-		{
+	if (instances.sort().join(', ') != lastSettings?.instances?.sort().join(', ')) {
+		
+		const matches = instances.map(host => `https://${host}/*`);
+		
+		const ids = ['content'];
+		const [ex] = await scripting.getRegisteredContentScripts({ ids });
+		if (ex) await scripting.unregisterContentScripts({ ids });
+		
+		if (matches.length) await scripting.registerContentScripts([{
 			id: 'content',
 			js: ['dist/content.js'],
-			matches: getSettings().instances.map(host => `https://${host}/*`),
+			matches: instances.map(host => `https://${host}/*`),
 			runAt: 'document_end',
-			persistAcrossSessions: false,
-		},
-	]);
-	else await scripting.updateContentScripts([
-		{
-			id: 'content',
-			matches: getSettings().instances.map(host => `https://${host}/*`),
-		},
-	]);
+			persistAcrossSessions: true,
+		}]);
+		
+	}
+	
+	await storage.sync.set({ lastSettings });
 	
 }

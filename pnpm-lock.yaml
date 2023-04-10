@@ -1,6 +1,7 @@
 lockfileVersion: 5.4
 
 specifiers:
+  '@types/chrome': ^0.0.228
   '@types/dompurify': ^2.4.0
   '@types/firefox-webext-browser': ^111.0.0
   '@types/node': ^18.15.3
@@ -22,6 +23,7 @@ dependencies:
   murmurhash: 2.0.1
 
 devDependencies:
+  '@types/chrome': 0.0.228
   '@types/firefox-webext-browser': 111.0.0
   '@types/node': 18.15.3
   '@typescript-eslint/eslint-plugin': 5.54.1_4rfaf6mlw2mmutqjcopwvbftpu
@@ -310,14 +312,35 @@ packages:
       fastq: 1.15.0
     dev: true
 
+  /@types/chrome/0.0.228:
+    resolution: {integrity: sha512-rDmyVEF+l9H+6FQYqsEGqQOjBw/uaSx6KJ6o47FwbQmPPcskmt8XlPbKjy5KeQXU3ZLiV2x45Fk4kdtRMSghfQ==}
+    dependencies:
+      '@types/filesystem': 0.0.32
+      '@types/har-format': 1.2.10
+    dev: true
+
   /@types/dompurify/2.4.0:
     resolution: {integrity: sha512-IDBwO5IZhrKvHFUl+clZxgf3hn2b/lU6H1KaBShPkQyGJUQ0xwebezIPSuiyGwfz1UzJWQl4M7BDxtHtCCPlTg==}
     dependencies:
       '@types/trusted-types': 2.0.3
     dev: false
 
+  /@types/filesystem/0.0.32:
+    resolution: {integrity: sha512-Yuf4jR5YYMR2DVgwuCiP11s0xuVRyPKmz8vo6HBY3CGdeMj8af93CFZX+T82+VD1+UqHOxTq31lO7MI7lepBtQ==}
+    dependencies:
+      '@types/filewriter': 0.0.29
+    dev: true
+
+  /@types/filewriter/0.0.29:
+    resolution: {integrity: sha512-BsPXH/irW0ht0Ji6iw/jJaK8Lj3FJemon2gvEqHKpCdDCeemHa+rI3WBGq5z7cDMZgoLjY40oninGxqk+8NzNQ==}
+    dev: true
+
   /@types/firefox-webext-browser/111.0.0:
     resolution: {integrity: sha512-KboW0ughUYzuYAvzWGJsiSMmH9AgJDvnstjsNrXMgf6cpJ5g1eBGzkqpjPzVqkOyTH/mFl7gd15+XyaVQhKywA==}
+    dev: true
+
+  /@types/har-format/1.2.10:
+    resolution: {integrity: sha512-o0J30wqycjF5miWDKYKKzzOU1ZTLuA42HZ4HE7/zqTOc/jTLdQ5NhYWvsRQo45Nfi1KHoRdNhteSI4BAxTF1Pg==}
     dev: true
 
   /@types/json-schema/7.0.11:

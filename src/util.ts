@@ -47,9 +47,9 @@ export class ActiveRequestMap<T> {
 	static nextId = 1;
 
 	map = new Map<string, { id: number; promise: Promise<Maybe<T>> }>;
-	timeout: Maybe<number>;
+	timeout: () => Maybe<number>;
 	
-	constructor({ timeout }: { timeout: Maybe<number> }) {
+	constructor({ timeout }: { timeout: () => Maybe<number> }) {
 		this.timeout = timeout;
 	}
 	
@@ -68,7 +68,7 @@ export class ActiveRequestMap<T> {
 	add(
 		key: string,
 		promise: Promise<Maybe<T>>,
-		timeout = this.timeout
+		timeout = this.timeout()
 	) {
 		if (this.map.has(key)) throw new Error(`Request already active: ${key}`);
 		return this.wrapAndAdd(key, ActiveRequestMap.nextId++, promise, timeout);
@@ -81,7 +81,7 @@ export class ActiveRequestMap<T> {
 	perform(
 		key: string,
 		action: (isActive: () => boolean) => Promise<Maybe<T>>,
-		timeout = this.timeout,
+		timeout = this.timeout()
 	) {
 		const active = this.map.get(key);
 		if (active) return active.promise;

@@ -7,7 +7,7 @@ import { ActiveRequestMap, reportAndNull } from '../util.js';
 
 import { callApi } from '../instances/fetch.js';
 
-const accountRequests = new ActiveRequestMap<Mapping>({ timeout: getSettings().searchTimeout });
+const accountRequests = new ActiveRequestMap<Mapping>({ timeout: () => getSettings().searchTimeout });
 
 async function fetchAccount(known: RemoteMapping) {
 	

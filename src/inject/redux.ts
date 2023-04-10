@@ -66,7 +66,7 @@ export function getReduxStore() {
 export function cleanUpFakeStatuses(ids: { realId: string; fakeId: string }[]) {
 	reduxStore?.dispatch((dispatch, getState) => {
 		const statuses = getState().get('statuses');
-		ids.filter(pair => statuses.has(pair.realId) && statuses.has(pair.fakeId)).forEach(({ fakeId: id }) => store.dispatch({
+		ids.filter(pair => statuses.has(pair.realId) && statuses.has(pair.fakeId)).forEach(({ fakeId: id }) => dispatch({
 			type: 'TIMELINE_DELETE',
 			id,
 			accountId: getState().getIn(['statuses', id, 'account']),

@@ -12,13 +12,12 @@ import {
 	Status,
 	StatusMapping,
 } from '../types.js';
-import { getSettings } from '../settings.js';
+import { getSettings, provideSettings } from '../settings.js';
 import { getStorage } from '../storage.js';
 import { identifyStatus } from './statuses.js';
-import DOMPurify from 'dompurify';
 import { callApi } from '../instances/fetch.js';
 import { fetchInstanceInfo, setInstanceInfo } from '../instances/info.js';
-import { contextLists, remapIdFields } from './ids.js';
+import { contextLists, remapIdFields } from '../ids.js';
 
 export async function mergeContextResponses({ localHost, mapping, localResponse, remoteResponse }: {
 	localHost: string;
@@ -192,14 +191,15 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 	
 }
 
-const contextRequests = new ActiveRequestMap<ContextResponse>({ timeout: getSettings().contextRequestTimeout });
+const contextRequests = new ActiveRequestMap<ContextResponse>({ timeout: () => getSettings().contextRequestTimeout });
 let contextCacheCleared = 0;
 
 export async function maybeClearContextCache() {
+	const settings = await provideSettings();
 	const now = Date.now();
 	if (now - contextCacheCleared < 60_000) return;
 	contextCacheCleared = now;
-	const thresh = now - getSettings().cacheContentMins * 60_000;
+	const thresh = now - settings.cacheContentMins * 60_000;
 	const tx = getStorage().transaction('remoteContextCache', 'readwrite');
 	for await (const rec of tx.store) {
 		if (rec.value.fetched > thresh) continue;

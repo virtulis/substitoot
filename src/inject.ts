@@ -3,8 +3,8 @@
 
 import { wrapXHR } from './inject/xhr.js';
 import { observeForRedux } from './inject/redux.js';
-
-console.log('WRLD');
+import { maybeFixOnLoad } from './inject/navigation.js';
 
 wrapXHR();
 observeForRedux();
+maybeFixOnLoad();

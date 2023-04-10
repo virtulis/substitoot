@@ -1,13 +1,13 @@
 // Entry point for the background process of the extension
 
-import { updateFirefoxEventHandlers } from './browsers/firefox.js';
+import { updateFirefoxConfig } from './browsers/firefox.js';
 import { initSettings } from './settings.js';
 import { clearCache, clearMetadata, initStorage } from './storage.js';
 import { packageVersion } from './util.js';
 
 import { maybeClearContextCache } from './remapping/context.js';
 import { setUpAPIPort } from './api/impl.js';
-import { host } from './browsers/host.js';
+import { asFirefox } from './browsers/any.js';
 
 let initRun = false;
 async function init() {
@@ -20,16 +20,16 @@ async function init() {
 	await initStorage();
 	setUpAPIPort();
 	
-	await initSettings(updateFirefoxEventHandlers);
+	await initSettings(updateFirefoxConfig);
 	
 	await maybeClearContextCache();
 	
 }
 
-host.runtime.onStartup.addListener(init);
-host.runtime.onInstalled.addListener(init);
+asFirefox.runtime.onStartup.addListener(init);
+asFirefox.runtime.onInstalled.addListener(init);
 
-host.runtime.onMessage.addListener(async (message) => {
+asFirefox.runtime.onMessage.addListener(async (message) => {
 	if (typeof message != 'object') return;
 	const command: string = message.command;
 	if (command == 'clearCache') {

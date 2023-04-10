@@ -65,8 +65,12 @@ So, *I think it's secure enough*?
 	npm install -g pnpm # if needed
 	
 	pnpm install
-	pnpm build
-	pnpm package
+	
+	# build and package for Firefox (Manifest v2)
+	pnpm package-mv2
+
+	# build and package for Chrome (Manifest v3)
+	pnpm package-mv2
 
 ## Development
 

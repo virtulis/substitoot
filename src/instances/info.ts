@@ -4,13 +4,14 @@ import { ActiveRequestMap, reportAndNull, sleep } from '../util.js';
 import { InstanceInfo } from '../types.js';
 import { callApi } from './fetch.js';
 import { getStorage } from '../storage.js';
+import { getSettings } from '../settings.js';
 
 export async function setInstanceInfo(instance: InstanceInfo) {
 	console.log('instance', instance);
 	await getStorage().put('instances', instance);
 }
 
-const instanceRequests = new ActiveRequestMap<InstanceInfo>({ timeout: 5_000 });
+const instanceRequests = new ActiveRequestMap<InstanceInfo>({ timeout: () => getSettings().instanceCheckTimeout });
 
 export async function fetchInstanceInfo(host: string, force = false): Promise<InstanceInfo> {
 	

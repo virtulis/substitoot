@@ -1,20 +1,20 @@
 // The content script that injects the XHR wrapper and provides an API proxy
 
-import { host } from './browsers/host.js';
+import { anyBrowser, asChrome } from './browsers/any.js';
 
 function inject() {
 	
 	// Somehow I got the injection twice on Android (and this breaks everything because request IDs)
 	// Not sure if testing artifact, restarting the app helped.
 	// Adding this just in case.
-	const src = host.runtime.getURL('dist/inject.js');
+	const src = anyBrowser.runtime.getURL('dist/inject.js');
 	if ([...document.body.getElementsByTagName('script')].find(s => s.src == src)) {
 		console.error('Content script ran twice?');
 		return;
 	}
 
 	// Not bothering to handle disconnect, not sure if I should.
-	const port = host.runtime.connect();
+	const port = asChrome.runtime.connect();
 	
 	port.onMessage.addListener(msg => {
 		window.postMessage({ substitootResponse: msg }, window.origin);
