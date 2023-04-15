@@ -53,19 +53,8 @@ export async function provideSettings() {
 }
 
 export async function reloadSettings() {
-	
-	let saved = await anyBrowser.storage.sync.get('settings').then(res => res.settings as Maybe<Partial<Settings>>);
-	
-	// FIXME clean up old defaults dumbly saved as "settings"
-	if (saved && (saved.searchTimeout == 3_000 || saved.contextRequestTimeout == 2_000)) {
-		saved = omit(saved, ['statusRequestTimeout', 'contextRequestTimeout', 'searchTimeout']);
-		for (const key of Object.keys(saved) as (keyof Settings)[]) if (saved[key] == defaultSettings[key]) delete saved[key];
-		console.log({ saved });
-		await anyBrowser.storage.sync.set({ settings: saved });
-	}
-	
+	const saved = await anyBrowser.storage.sync.get('settings').then(res => res.settings as Maybe<Partial<Settings>>);
 	settings = { ...defaultSettings, ...saved };
-	
 }
 
 export async function initSettings(onChange: () => any) {
@@ -85,16 +74,6 @@ export async function initSettings(onChange: () => any) {
 export function computePermissions(instances: string[]): browser.permissions.Permissions {
 	return {
 		origins: instances.map(host => `https://${host}/*`),
-		permissions: [
-			
-			// 'webRequest',
-			// 'webRequestBlocking',
-			'webNavigation',
-			'scripting',
-			
-			// Required in Manifest V3 but errors out in V2 in older versions
-			// 'webRequestFilterResponse',
-			
-		],
+		permissions: [],
 	};
 }

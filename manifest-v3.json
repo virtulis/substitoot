@@ -13,7 +13,7 @@
 		"storage",
 		"scripting"
 	],
-	"host_permissions": [
+	"optional_host_permissions": [
 		"https://*/*"
 	],
 	"options_ui": {
@@ -27,7 +27,7 @@
 	"web_accessible_resources": [
 		{
 			"resources": ["dist/inject.js"],
-			"matches": ["https://loud.computer/*"]
+			"matches": ["https://*/*"]
 		}
 	]
 }
