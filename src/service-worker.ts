@@ -1,6 +1,6 @@
 // Entry point for the background process of the extension
 
-import { initSettings } from './settings.js';
+import { getSettings, initSettings } from './settings.js';
 import { clearCache, clearMetadata, initStorage } from './storage.js';
 import { packageVersion } from './util.js';
 
@@ -9,7 +9,7 @@ import { setUpAPIPort } from './api/impl.js';
 import { asChrome } from './browsers/any.js';
 import { updateChromeConfig } from './browsers/chrome.js';
 
-async function init() {
+async function init(installed: boolean) {
 	
 	console.log('init', packageVersion);
 	
@@ -19,10 +19,12 @@ async function init() {
 	
 	await maybeClearContextCache();
 	
+	if (installed && !getSettings().instances.length) asChrome.runtime.openOptionsPage();
+	
 }
 
-asChrome.runtime.onStartup.addListener(init);
-asChrome.runtime.onInstalled.addListener(init);
+asChrome.runtime.onStartup.addListener(() => init(false));
+asChrome.runtime.onInstalled.addListener(() => init(true));
 
 asChrome.runtime.onMessage.addListener(async (message) => {
 	if (typeof message != 'object') return;
