@@ -7,8 +7,8 @@ export async function updateChromeConfig() {
 	
 	const lastSettings = await storage.sync.get('lastSettings').then(res => res.lastSettings as Maybe<Partial<Settings>>);
 	
-	const { instances } = await provideSettings();
-	
+	const settings = await provideSettings();
+	const { instances } = settings;
 	if (instances.sort().join(', ') != lastSettings?.instances?.sort().join(', ')) {
 		
 		const matches = instances.map(host => `https://${host}/*`);
@@ -27,6 +27,6 @@ export async function updateChromeConfig() {
 		
 	}
 	
-	await storage.sync.set({ lastSettings });
+	await storage.sync.set({ lastSettings: settings });
 	
 }

@@ -4,7 +4,7 @@ import { computePermissions, defaultSettings, Settings } from './settings.js';
 import { reportAndNull } from './util.js';
 import { anyBrowser, asChrome } from './browsers/any.js';
 
-let settings = defaultSettings;
+let settings = { ...defaultSettings };
 const keys = Object.keys(settings) as Array<keyof Settings>;
 const inputs = Object.fromEntries(keys.map(k => [
 	k,
@@ -69,7 +69,6 @@ for (const key of ['instances', 'skipInstances'] as const) {
 			val => val.trim().replace(/^\w*:\/\//g, '').replace(/\/.*$/g, '').toLowerCase()
 		).filter(val => !!val);
 		save();
-		// Not using optional permissions for now, hopefully temporary
 		if (key == 'instances') requestPermissions();
 	});
 }
