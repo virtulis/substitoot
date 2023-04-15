@@ -3,8 +3,11 @@
 
 import { wrapXHR } from './inject/xhr.js';
 import { observeForRedux } from './inject/redux.js';
-import { maybeFixOnLoad } from './inject/navigation.js';
+import { maybeFixOnLoad, wrapHistory } from './inject/navigation.js';
 
 wrapXHR();
+wrapHistory();
+
 observeForRedux();
+
 maybeFixOnLoad();

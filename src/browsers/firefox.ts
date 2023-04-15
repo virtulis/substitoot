@@ -39,32 +39,38 @@ export async function updateFirefoxConfig() {
 		return;
 	}
 	
+	// Legacy mode
 	if (settings.useRequestFilter) {
+		
 		const filter = getWebRequestFilter(settings);
 		webRequest.onBeforeRequest.addListener(beforeRequestListener, filter, ['blocking', 'requestBody']);
+		
+		webNavigation.onCompleted.addListener(navigationListener, {
+			url: settings.instances.map(host => ({
+				hostEquals: host,
+				pathPrefix: '/@',
+				pathContains: '/s:',
+			})),
+		});
+		webNavigation.onHistoryStateUpdated.addListener(historyListener, {
+			url: settings.instances.map(host => ({
+				hostEquals: host,
+				pathPrefix: '/@',
+				pathContains: '/s:',
+			})),
+		});
+		
 	}
 	
-	webNavigation.onCompleted.addListener(navigationListener, {
-		url: settings.instances.map(host => ({
-			hostEquals: host,
-			pathPrefix: '/@',
-			pathContains: '/s:',
-		})),
-	});
-	webNavigation.onHistoryStateUpdated.addListener(historyListener, {
-		url: settings.instances.map(host => ({
-			hostEquals: host,
-			pathPrefix: '/@',
-			pathContains: '/s:',
-		})),
-	});
+	// Injection mode
+	else {
 	
-	if (!settings.useRequestFilter) {
 		contentScript = await contentScripts.register({
 			js: [{ file: 'dist/content.js' }],
 			matches: settings.instances.map(host => `https://${host}/*`),
 			runAt: 'document_end',
 		});
+		
 	}
 	
 }

@@ -1,6 +1,7 @@
 // The content script that injects the XHR wrapper and provides an API proxy
 
 import { anyBrowser, asChrome } from './browsers/any.js';
+import { Maybe } from './types.js';
 
 function inject() {
 	
@@ -13,17 +14,22 @@ function inject() {
 		return;
 	}
 
-	// Not bothering to handle disconnect, not sure if I should.
-	const port = asChrome.runtime.connect();
-	
-	port.onMessage.addListener(msg => {
-		window.postMessage({ substitootResponse: msg }, window.origin);
-	});
+	let port: Maybe<chrome.runtime.Port> = null;
+	const connect = () => {
+		port = asChrome.runtime.connect();
+		port.onMessage.addListener(msg => {
+			window.postMessage({ substitootResponse: msg }, window.origin);
+		});
+		port.onDisconnect.addListener(() => {
+			port = null;
+		});
+	};
 	
 	window.addEventListener('message', ev => {
 		if (ev.source != window) return;
 		if (!ev.data.substitootRequest?.id) return;
-		port.postMessage(ev.data.substitootRequest);
+		if (!port) connect();
+		port!.postMessage(ev.data.substitootRequest);
 	});
 	
 	const script = document.createElement('script');
