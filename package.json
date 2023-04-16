@@ -14,7 +14,7 @@
 		"use-mv2": "rm -f manifest.json ; ln -s manifest-v2.json manifest.json",
 		"use-mv3": "rm -f manifest.json ; ln -s manifest-v3.json manifest.json",
 		"package-mv2": "pnpm run use-mv2 && pnpm run build && web-ext build --artifacts-dir web-ext-artifacts/mv2 --ignore-files src web scripts *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml dist/service-worker.js",
-		"package-mv3": "pnpm run use-mv2 && pnpm run build && web-ext build --artifacts-dir web-ext-artifacts/mv3 --ignore-files src web scripts *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml dist/background.js"
+		"package-mv3": "pnpm run use-mv3 && pnpm run build && web-ext build --artifacts-dir web-ext-artifacts/mv3 --ignore-files src web scripts *.iml tsconfig.json tsconfig.tsbuildinfo pnpm-lock.yaml dist/background.js"
 	},
 	"devDependencies": {
 		"@types/chrome": "^0.0.228",
