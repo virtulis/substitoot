@@ -13,6 +13,8 @@ async function fetchAccount(known: RemoteMapping) {
 	
 	const { localHost, remoteHost, remoteId } = known;
 	
+	if (getSettings().skipInstances.includes(localHost)) return null;
+	
 	const ref = `${remoteId}@${remoteHost}`;
 	
 	const lookupRes = await callApi(`https://${localHost}/api/v1/accounts/lookup?acct=${ref}`).catch(reportAndNull);
@@ -34,6 +36,8 @@ async function fetchAccount(known: RemoteMapping) {
 		await getStorage().put('remoteAccountMapping', mapping);
 		return mapping;
 	}
+	
+	if (getSettings().skipInstances.includes(remoteHost)) return null;
 	
 	const searchUrl = `https://${localHost}/api/v2/search?q=${ref}&resolve=true&limit=1&type=accounts`;
 	console.log('resolve', ref, searchUrl);

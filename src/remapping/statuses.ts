@@ -135,6 +135,7 @@ export async function provideStatusMapping(known: MappingData, timeout = getSett
 	
 	const mapping = (existing ?? known) as StatusMapping;
 	if (!isRemoteMapping(mapping) || (!mapping.username && !mapping.uri)) return null;
+	if (getSettings().skipInstances.includes(mapping.remoteHost)) return null;
 	
 	const key = `${known.localHost}:${known.remoteHost}:${known.remoteId}`;
 	

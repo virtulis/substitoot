@@ -15,6 +15,8 @@ const instanceRequests = new ActiveRequestMap<InstanceInfo>({ timeout: () => get
 
 export async function fetchInstanceInfo(host: string, force = false): Promise<InstanceInfo> {
 	
+	if (getSettings().skipInstances.includes(host)) return { host };
+	
 	const instance: InstanceInfo = (await getStorage().get('instances', host)) ?? { host };
 	if (!force && instance?.checked && Date.now() - instance.checked < 24 * 3600_000) return instance;
 	
