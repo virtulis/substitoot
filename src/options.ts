@@ -2,7 +2,7 @@
 
 import { computePermissions, defaultSettings, Settings } from './settings.js';
 import { reportAndNull } from './util.js';
-import { anyBrowser, asChrome } from './browsers/any.js';
+import { anyBrowser, asChrome, maybeFirefox } from './browsers/any.js';
 
 let settings = { ...defaultSettings };
 const keys = Object.keys(settings) as Array<keyof Settings>;
@@ -95,5 +95,7 @@ document.getElementById('clearMetadata')!.addEventListener('click', () => asChro
 asChrome.storage.sync.onChanged.addListener(load);
 asChrome.permissions.onAdded.addListener(checkPermissions);
 asChrome.permissions.onRemoved.addListener(checkPermissions);
+
+if (!maybeFirefox) document.getElementById('legacyModeSwitch')?.classList.add('hidden');
 
 load();
