@@ -9,25 +9,22 @@ import { setUpAPIPort } from './api/impl.js';
 import { asChrome } from './browsers/any.js';
 import { updateChromeConfig } from './browsers/chrome.js';
 
-let initRan = false;
-async function init(installed: boolean) {
+async function init() {
 	
 	console.log('init', packageVersion);
 	
-	if (!initRan) {
-		initRan = true;
-		await initStorage();
-		await initSettings(updateChromeConfig);
-		await maybeClearContextCache();
-	}
-	
-	if (installed && !getSettings().instances.length) asChrome.runtime.openOptionsPage();
+	await initStorage();
+	await initSettings(updateChromeConfig);
+	await maybeClearContextCache();
 	
 }
 
-asChrome.runtime.onStartup.addListener(() => init(false));
-asChrome.runtime.onInstalled.addListener(() => init(true));
-init(false).catch(reportAndNull);
+const initPromise = init().catch(reportAndNull);
+
+asChrome.runtime.onInstalled.addListener(async () => {
+	await initPromise;
+	if (!getSettings().instances.length) asChrome.runtime.openOptionsPage();
+});
 
 asChrome.runtime.onMessage.addListener(async (message) => {
 	if (typeof message != 'object') return;
