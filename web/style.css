@@ -27,12 +27,15 @@ h1 small {
 	font-size: 20px;
 	margin: 0 .5em;
 }
+header nav {
+	flex: 1 1 auto;
+}
 header nav ul {
 	display: flex;
 	flex-wrap: wrap;
 	gap: 24px;
 }
-header nav a {
+header nav a, header nav li {
 	text-decoration: none;
 	display: flex;
 	gap: 8px;
@@ -46,6 +49,12 @@ header nav a img {
 }
 header nav a span {
 	text-decoration: underline;
+}
+.install {
+	margin-right: auto;
+}
+.etc {
+	margin-left: auto;
 }
 article {
 	margin: 32px 0;

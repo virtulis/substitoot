@@ -8,10 +8,16 @@ Mastodon often fails to show up-to-date context and information on posts from re
 
 It should work reliably on mainline Mastodon versions 4.0 and up, your mileage may vary for older instances or forks.
 
+## Missing features
+
+* The extension currently does not account for personal block lists. Implementing this is the next top priority.
+* Viewing full history of user's posts is not implemented (and kind of tricky, so probably not happening soon).
+* Only Mastodon is currently supported both for local and remote side (see explanation below).
+
 ## Installation
 
 * Firefox: install the latest release from [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/substitoot/).
-* Chrome version is coming within a week, @ me to know when!
+* Chrome: install from [Chrome Web Store](https://chrome.google.com/webstore/detail/substitoot-%E2%80%94-a-transparen/oedncfcpfcmehalbpdnekgaaldefpaef).
 * Android: installing addons is possible with [Firefox Nightly](https://play.google.com/store/apps/details?id=org.mozilla.fenix) and [Fennec F-Droid](https://f-droid.org/en/packages/org.mozilla.fennec_fdroid/). It's [somewhat cumbersome](https://www.maketecheasier.com/install-addon-firefox-android/) but it does work.
 
 Make sure to open the addon settings and type in the instances it should be active on!
