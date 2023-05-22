@@ -1,5 +1,6 @@
-import { Maybe, RemoteMapping, StatusCounts } from '../types.js';
+import { LocalMapping, Maybe, RemoteMapping, Status, StatusCounts } from '../types.js';
 import { maybe, pick } from '../util.js';
+import { patchStatus } from './status.js';
 
 interface ReduxStore {
 	dispatch(arg: ((dispatch: ReduxStore['dispatch'], getState: () => any) => void) | object): void;
@@ -71,12 +72,13 @@ export function observeForRedux() {
 
 }
 
-export function getReduxStore() {
-	return reduxStore;
+export async function waitForReduxStore() {
+	return await reduxObserver;
 }
 
-export function cleanUpFakeStatuses(ids: { realId: string; fakeId: string }[]) {
-	reduxStore?.dispatch((dispatch, getState) => {
+export async function cleanUpFakeStatuses(ids: { realId: string; fakeId: string }[]) {
+	const store = await waitForReduxStore();
+	store?.dispatch((dispatch, getState) => {
 		const statuses = getState().get('statuses');
 		ids.filter(pair => statuses.has(pair.realId) && statuses.has(pair.fakeId)).forEach(({ fakeId: id }) => dispatch({
 			type: 'TIMELINE_DELETE',
@@ -90,22 +92,63 @@ export function cleanUpFakeStatuses(ids: { realId: string; fakeId: string }[]) {
 	});
 }
 
-export function updateRemoteStatusCounts(mapping: RemoteMapping, counts: StatusCounts) {
+export async function updateRemoteStatusCounts(mapping: RemoteMapping, counts: StatusCounts) {
+	
+	const patch = pick(counts, ['replies_count', 'reblogs_count', 'favourites_count']);
+	if (mapping.localId) patchStatus(mapping.localId, patch);
+	
+	const store = await waitForReduxStore();
 	const fakeId = `s:s:${mapping.remoteHost}:${mapping.remoteId}`;
-	reduxStore?.dispatch((dispatch, getState) => {
+	for (let attempt = 0; attempt < 20; attempt++) {
+		if (await new Promise<boolean>(resolve => {
+			store?.dispatch((dispatch, getState) => {
 		
-		const localReal = maybe(mapping.localId, id => getState().getIn(['statuses', id]));
-		const localFake = maybe(fakeId, id => getState().getIn(['statuses', id]));
+				const localReal = maybe(mapping.localId, id => getState().getIn(['statuses', id]));
+				// console.log(localReal?.get('isLoading'), status);
+				if (localReal?.get('isLoading')) return setTimeout(() => resolve(false), 100);
+				const localFake = maybe(fakeId, id => getState().getIn(['statuses', id]));
 		
-		const updated = [localReal, localFake].filter(o => !!o).map(local => ({
-			...local.toObject(),
-			...pick(counts, ['replies_count', 'reblogs_count', 'favourites_count']),
-		}));
+				const updated = [localReal, localFake].filter(o => !!o).map(local => ({
+					...local.toObject(),
+					...patch,
+				}));
 		
-		if (updated.length) {
-			dispatch({ type: 'STATUSES_IMPORT', statuses: updated });
-		}
-		
-	});
+				if (updated.length) {
+					// console.log({ type: 'STATUSES_IMPORT', statuses: updated });
+					dispatch({ type: 'STATUSES_IMPORT', statuses: updated });
+				}
+				
+				resolve(true);
+				
+			});
+		})) break;
+	}
+	
+}
+
+export async function maybeUpdateStatusReplyTo(mapping: LocalMapping, patch: Pick<Status, 'in_reply_to_id' | 'in_reply_to_account_id'>) {
+
+	patchStatus(mapping.localId, patch);
+	
+	const store = await waitForReduxStore();
+	for (let attempt = 0; attempt < 20; attempt++) {
+		if (await new Promise<boolean>(resolve => {
+			store?.dispatch((dispatch, getState) => {
+				
+				const status = getState().getIn(['statuses', mapping.localId]);
+				// console.log(status.get('isLoading'), status);
+				if (status.get('isLoading')) return setTimeout(() => resolve(false), 100);
+				if (status.get('in_reply_to_id')) return resolve(true);
+				
+				const updated = {
+					...status.toObject(),
+					...patch,
+				};
+				dispatch({ type: 'STATUSES_IMPORT', statuses: [updated] });
+				resolve(true);
+				
+			});
+		})) break;
+	}
 	
 }

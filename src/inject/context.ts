@@ -11,7 +11,7 @@ import {
 import { callSubstitoot } from './call.js';
 import { PatchedXHR } from './xhr.js';
 import { reportAndNull, sleep } from '../util.js';
-import { cleanUpFakeStatuses, updateRemoteStatus } from './redux.js';
+import { cleanUpFakeStatuses, maybeUpdateStatusReplyTo, updateRemoteStatusCounts } from './redux.js';
 import DOMPurify from 'dompurify';
 
 let curReqAt = 0;
@@ -128,7 +128,7 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		if (!isRemoteMapping(mapping)) return;
 		
 		callSubstitoot('fetchStatusCounts', mapping.remoteHost, mapping.remoteId)
-			.then(res => res && updateRemoteStatus(mapping as RemoteMapping, res))
+			.then(res => res && updateRemoteStatusCounts(mapping as RemoteMapping, res))
 			.catch(reportAndNull);
 		
 		return await callSubstitoot('fetchContext', mapping);
@@ -164,10 +164,16 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 	
 	// console.log(merged);
 	
+	const parent = merged.ancestors[merged.ancestors.length - 1];
+	if (parent && isLocalMapping(mapping)) await maybeUpdateStatusReplyTo(mapping, {
+		in_reply_to_id: parent.id,
+		in_reply_to_account_id: parent.account.id,
+	});
+	
 	Object.defineProperty(xhr, 'responseText', { value: JSON.stringify(merged) });
 	onloadend.call(xhr, event);
 	
 	const cleanUpIds = merged.descendants.filter(s => s.substitoot_fake_id).map(s => ({ realId: s.id, fakeId: s.substitoot_fake_id! }));
-	if (cleanUpIds.length) cleanUpFakeStatuses(cleanUpIds);
+	if (cleanUpIds.length) await cleanUpFakeStatuses(cleanUpIds);
 	
 }

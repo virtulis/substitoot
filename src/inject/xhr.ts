@@ -1,5 +1,10 @@
 import { wrapContextRequest } from './context.js';
-import { wrapStatusPostRequest, wrapStatusRequest } from './status.js';
+import {
+	wrapStatusPostRequest,
+	wrapRemoteStatusRequest,
+	wrapLocalStatusRequest,
+	wrapTimelineRequest,
+} from './status.js';
 import { wrapAccountQueryRequest, wrapAccountRequest } from './account.js';
 
 export type PatchedXHR = XMLHttpRequest & {
@@ -40,33 +45,37 @@ export function wrapXHR() {
 		return setRequestHeader.call(this, name, value);
 	};
 	
-	proto.send = function (this: PatchedXHR, ...args: Parameters<typeof send>) {
+	proto.send = function (this: PatchedXHR, body?: Document | XMLHttpRequestBodyInit | null) {
 		
-		if (!this.__url) return send.apply(this, args);
+		if (!this.__url) return send.call(this, body);
 		
 		const method = this.__method;
 		const url = new URL(this.__url, location.href);
 		
 		const parts = url.pathname.split('/').slice(1);
-		if (url.hostname != localHost || parts[0] != 'api') return send.apply(this, args);
+		if (url.hostname != localHost || parts[0] != 'api') return send.call(this, body);
 		
 		if (parts[2] == 'statuses') {
 			if (method == 'GET' && parts[4] == 'context') return wrapContextRequest(this, parts);
-			if (parts[3]?.indexOf('s:') === 0) return wrapStatusRequest(this, parts, args);
-			if (method == 'POST' && typeof args[0] == 'string') return wrapStatusPostRequest(this, args[0]);
+			if (parts[3]?.indexOf('s:') === 0) return wrapRemoteStatusRequest(this, parts, body);
+			if (method == 'GET' && !parts[4]) return wrapLocalStatusRequest(this, parts, body);
+			if (method == 'POST' && typeof body == 'string') return wrapStatusPostRequest(this, body);
 		}
 		if (parts[2] == 'accounts') {
-			if (parts[3]?.indexOf('s:') === 0) return wrapAccountRequest(this, parts, args);
-			if (url.search.includes('s:a:')) return wrapAccountQueryRequest(this, url, args);
+			if (parts[3]?.indexOf('s:') === 0) return wrapAccountRequest(this, parts, body);
+			if (url.search.includes('s:a:')) return wrapAccountQueryRequest(this, url, body);
+		}
+		if (parts[2] == 'timelines' && method == 'GET') {
+			return wrapTimelineRequest(this, parts, body);
 		}
 		
-		return send.apply(this, args);
+		return send.call(this, body);
 		
 	} as typeof send;
 
 }
 
-export function swapInXHR(dest: PatchedXHR, url: string, body: any) {
+export function swapInXHR(dest: PatchedXHR, url: string, body: any, responseFilter?: (res: string) => string) {
 	
 	const { onloadend, onerror, onabort } = dest;
 	
@@ -76,7 +85,8 @@ export function swapInXHR(dest: PatchedXHR, url: string, body: any) {
 	actual.onabort = onabort;
 	
 	actual.onloadend = (ev) => {
-		Object.defineProperty(dest, 'responseText', { value: actual.responseText });
+		const response = responseFilter?.(actual.responseText) ?? actual.responseText;
+		Object.defineProperty(dest, 'responseText', { value: response });
 		Object.defineProperty(dest, 'status', { value: actual.status });
 		onloadend!.call(actual, ev);
 	};
