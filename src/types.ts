@@ -48,6 +48,8 @@ export interface Status extends Thing {
 	
 	application?: Maybe<{ name?: Maybe<string> }>;
 	
+	reblog?: Maybe<Status>;
+	
 	replies_count?: number;
 	reblogs_count?: number;
 	favourites_count?: number;
@@ -75,6 +77,7 @@ export interface MappingData {
 	localId?: Maybe<string>;
 	remoteHost?: Maybe<string>;
 	remoteId?: Maybe<string>;
+	actualId?: Maybe<string>;
 }
 export interface Mapping extends MappingData {
 
@@ -96,6 +99,7 @@ export interface Mapping extends MappingData {
 export interface StatusMapping extends Mapping {
 	uri?: string;
 	username?: Maybe<string>;
+	reblog?: Maybe<StatusMapping>;
 }
 export interface AccountMapping extends Mapping {
 	followedSince?: Maybe<number>;
@@ -124,6 +128,7 @@ export interface InstanceInfo {
 	host: string;
 	checked?: Maybe<number>;
 	isMastodon?: Maybe<boolean>;
+	isCompatible?: Maybe<boolean>;
 	software?: Maybe<string>;
 	version?: Maybe<string>;
 	lastRequest?: Maybe<number>; // timestamp

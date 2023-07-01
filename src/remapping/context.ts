@@ -18,6 +18,7 @@ import { identifyStatus } from './statuses.js';
 import { callApi } from '../instances/fetch.js';
 import { fetchInstanceInfo, setInstanceInfo } from '../instances/info.js';
 import { contextLists, remapIdFields } from '../ids.js';
+import { findMappingActualId, shouldHaveActualId } from '../instances/compat.js';
 
 export async function mergeContextResponses({ localHost, mapping, localResponse, remoteResponse }: {
 	localHost: string;
@@ -42,6 +43,7 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 	const remapIds = new Map<string, string>;
 	
 	remapIds.set(mapping.remoteId, mapping.localId ?? `s:s:${mapping.remoteHost}:${mapping.remoteId}`);
+	if (mapping.actualId) remapIds.set(mapping.actualId, mapping.localId ?? `s:s:${mapping.remoteHost}:${mapping.remoteId}`);
 	
 	localResponse ??= { ancestors: [], descendants: [] };
 
@@ -50,19 +52,19 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 		const { uri, account } = status;
 		local.set(uri, status);
 		
-		const { remoteHost, remoteId, remoteReference } = identifyStatus(localHost, status);
+		const { localId, remoteHost, remoteId, remoteReference } = identifyStatus(localHost, status);
 		const mapping: FullMapping<StatusMapping> = {
 			
 			uri: status.uri,
 			
 			localHost,
-			localId: status.id,
+			localId,
 			remoteHost,
 			remoteId,
 			
 			username: status.account?.username,
 			
-			localReference: `${localHost}:${status.id}`,
+			localReference: `${localHost}:${localId}`,
 			remoteReference,
 			updated: Date.now(),
 			
@@ -208,15 +210,19 @@ export async function maybeClearContextCache() {
 	}
 }
 
-export async function fetchContext(mapping: RemoteMapping) {
+export async function fetchContext(mapping: RemoteMapping<StatusMapping>) {
 	
 	if (getSettings().skipInstances.includes(mapping.remoteHost)) return null;
-	if (!mapping.remoteId.match(/^\d+$/)) return null; // not Mastodon
 	
 	const instance = await fetchInstanceInfo(mapping.remoteHost);
-	if (instance.isMastodon === false || instance.canRequestContext === false) return null;
+	if (!instance.isCompatible || instance.canRequestContext === false) return null;
 	
-	const url = `https://${mapping.remoteHost}/api/v1/statuses/${mapping.remoteId}/context`;
+	if (!mapping.actualId && shouldHaveActualId(mapping)) {
+		mapping = await findMappingActualId(mapping);
+	}
+	const actualId = mapping.actualId ?? mapping.remoteId;
+	
+	const url = `https://${mapping.remoteHost}/api/v1/statuses/${actualId}/context`;
 	const key = `${mapping.remoteHost}:${mapping.remoteId}`;
 	
 	const now = Date.now();

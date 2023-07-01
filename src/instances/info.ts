@@ -86,6 +86,7 @@ async function doFetchInstanceInfo(instance: InstanceInfo) {
 		instance.version = version;
 		const compatible = version.match(/compatible; (\w+)/)?.[1];
 		instance.isMastodon = !compatible && !!json.urls?.streaming_api; // dumb random duck typing
+		instance.isCompatible = instance.isMastodon || !!compatible;
 		instance.software = instance.isMastodon ? 'mastodon' : compatible?.toLowerCase() ?? null;
 	}
 	else {

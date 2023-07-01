@@ -56,7 +56,7 @@ export function setUpAPIPort() {
 			
 			try {
 				const result = await (api[request.method] as Function)(...request.arguments);
-				console.log(result);
+				// console.log(request.method, '<', request.arguments, '>', result);
 				port.postMessage(<APIResponse> {
 					id: request.id,
 					result,

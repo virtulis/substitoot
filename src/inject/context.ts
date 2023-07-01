@@ -55,7 +55,7 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 	let mapping = (await shared.mappingRequest) ?? parsed;
 	// console.log(mapping);
 	
-	if (mapping.remoteHost == mapping.localHost) {
+	if (!mapping || mapping.remoteHost == mapping.localHost) {
 		if (!isSecondReq) {
 			xhr.__send();
 		}
@@ -76,14 +76,14 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 	
 	if (!isSecondReq) shared.localRequest = (async () => {
 	
-		if (!isLocalMapping(mapping)) mapping = (await shared.fullMappingRequest) ?? mapping;
+		if (!isLocalMapping(mapping)) mapping = (await shared.fullMappingRequest) ?? mapping ?? parsed;
 		
 		let actual: PatchedXHR;
 		if (isLocalMapping(parsed) || !isLocalMapping(mapping)) {
 			actual = xhr;
 		}
 		else {
-			const url = `/${parts.map(p => p == id ? mapping.localId : p).join('/')}`;
+			const url = `/${parts.map(p => p == id ? mapping!.localId : p).join('/')}`;
 			actual = new XMLHttpRequest() as PatchedXHR;
 			actual.open(xhr.__method, url);
 			for (const [name, value] of Object.entries(xhr.__headers)) actual.setRequestHeader(name, value);
@@ -127,11 +127,11 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		if (!isRemoteMapping(mapping)) mapping = (await shared.fullMappingRequest) ?? mapping;
 		if (!isRemoteMapping(mapping)) return;
 		
-		callSubstitoot('fetchStatusCounts', mapping.remoteHost, mapping.remoteId)
+		callSubstitoot('fetchStatusCounts', mapping as RemoteMapping<StatusMapping>)
 			.then(res => res && updateRemoteStatusCounts(mapping as RemoteMapping, res))
 			.catch(reportAndNull);
 		
-		return await callSubstitoot('fetchContext', mapping);
+		return await callSubstitoot('fetchContext', mapping as RemoteMapping<StatusMapping>);
 		
 	})();
 	

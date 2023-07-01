@@ -79,7 +79,8 @@ export async function wrapTimelineRequest(xhr: PatchedXHR, parts: string[], body
 						changed = true;
 					}
 					else if (status) {
-						enqueueStatusFetch({ status });
+						// DoS potential, disable for now
+						// enqueueStatusFetch({ status });
 					}
 				}
 			}
@@ -134,14 +135,17 @@ export function enqueueStatusFetch(entry: QueueEntry) {
 	(async () => {
 		while (statusQueue.length) {
 			const entry = statusQueue.shift()!;
-			const local = entry.mapping ?? { localHost: location.hostname, localId: entry.status!.id };
-			const mapping = isFullMapping(local) ? local : await callSubstitoot('provideStatusMapping', local).then(res => res?.mapping);
-			console.log(mapping?.localId, mapping?.remoteId);
-			if (!isFullMapping(mapping)) continue;
-			const counts = await callSubstitoot('fetchStatusCounts', mapping.remoteHost, mapping.remoteId);
-			console.log(counts);
-			if (counts) await updateRemoteStatusCounts(mapping, counts);
-			await sleep(100);
+			const mapping = isFullMapping(entry.mapping)
+				? entry.mapping
+				: await callSubstitoot('provideStatusMapping', entry.mapping ?? { localHost: location.hostname, localId: entry.status!.id }).then(res => res?.mapping);
+			if (isFullMapping(mapping)) {
+				const counts = await callSubstitoot('fetchStatusCounts', mapping);
+				if (counts) await updateRemoteStatusCounts(mapping, counts);
+				if (mapping.remoteHost != mapping.localHost && counts?.replies_count) {
+					await callSubstitoot('fetchContext', mapping); // just prefetch
+				}
+			}
+			await sleep(200);
 		}
 	})().catch(reportAndNull).finally(() => statusQueueActive = false);
 }

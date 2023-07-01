@@ -14,9 +14,10 @@ import {
 } from '../types.js';
 import { getStorage } from '../storage.js';
 import { v3 as murmurhash } from 'murmurhash';
-import { ActiveRequestMap, pick, reportAndNull } from '../util.js';
+import { ActiveRequestMap, maybe, pick, reportAndNull } from '../util.js';
 import { getSettings } from '../settings.js';
 import { callApi } from '../instances/fetch.js';
+import { findMappingActualId, shouldHaveActualId } from '../instances/compat.js';
 
 export async function getLocalStatusMapping({ localHost, localId }: LocalMapping) {
 	// console.log('get', 'localStatusMapping', `${localHost}:${localId}`);
@@ -41,54 +42,67 @@ export async function getStatusMapping(mapping: MappingData): Promise<Maybe<Stat
 }
 
 export function identifyStatus(localHost: string, status: Status) {
-	const src = new URL(status.uri);
+	const actualStatus = status.reblog ?? status;
+	const localId = actualStatus.id;
+	const src = new URL(actualStatus.uri);
 	const remoteHost = src.hostname;
-	const match = src.pathname.match(/^\/users\/[^/]+\/statuses\/([^/]+)$/);
-	const remoteId = match?.[1] || `m${murmurhash(status.uri)}`;
+	const match = src.pathname.match(/^\/users\/[^/]+\/statuses\/([^/]+)(\/|$)/);
+	const remoteId = match?.[1] || `m${murmurhash(actualStatus.uri)}`;
 	const remoteReference = `${localHost}:${remoteHost}:${remoteId}`;
-	return { remoteHost, remoteId, remoteReference };
+	return { actualStatus, localId, remoteHost, remoteId, remoteReference };
 }
 
-export async function processStatusJSON(localHost: string, status: Status, save = true): Promise<StatusResult> {
+export async function processStatusJSON(localHost: string, json: Status, save = true): Promise<StatusResult> {
 	
-	const localReference = `${localHost}:${status.id}`;
-	
-	const { remoteHost, remoteId, remoteReference } = identifyStatus(localHost, status);
-	const username = status.account?.username;
-	
-	const mapping: LocalMapping<StatusMapping> = {
-		uri: status.uri,
-		localReference,
-		remoteReference,
-		localHost,
-		localId: status.id,
-		remoteHost,
-		remoteId,
-		username,
-		updated: Date.now(),
+	const process = async (status: Status, reblog?: Maybe<StatusMapping>) => {
+		
+		const localReference = `${localHost}:${status.id}`;
+		
+		const { remoteHost, remoteId, remoteReference } = identifyStatus(localHost, status);
+		const username = status.account?.username;
+		
+		const mapping: LocalMapping<StatusMapping> = {
+			uri: status.uri,
+			localReference,
+			remoteReference,
+			localHost,
+			localId: status.id,
+			remoteHost,
+			remoteId,
+			username,
+			updated: Date.now(),
+			reblog,
+		};
+		
+		if (save) {
+			// console.log('put', 'localStatusMapping', mapping);
+			await getStorage().put('localStatusMapping', mapping);
+			if (isRemoteMapping(mapping)) await getStorage().put('remoteStatusMapping', mapping);
+		}
+		
+		const counts: Maybe<StatusCounts> = localHost == remoteHost ? {
+			...pick(status, ['replies_count', 'reblogs_count', 'favourites_count']),
+			localReference,
+			updated: Date.now(),
+		} : null;
+		if (counts) await getStorage().put('localStatusCounts', counts);
+		
+		return { mapping, status, counts };
+		
 	};
 	
-	if (save) {
-		// console.log('put', 'localStatusMapping', mapping);
-		await getStorage().put('localStatusMapping', mapping);
-		if (isRemoteMapping(mapping)) await getStorage().put('remoteStatusMapping', mapping);
-	}
+	const reblog = await maybe(json.reblog, process);
+	const info = await process(json, reblog?.mapping);
 	
-	const counts: Maybe<StatusCounts> = localHost == remoteHost ? {
-		...pick(status, ['replies_count', 'reblogs_count', 'favourites_count']),
-		localReference,
-		updated: Date.now(),
-	} : null;
-	if (counts) await getStorage().put('localStatusCounts', counts);
-	
-	return { mapping, status, counts };
+	return { ...info, reblog };
 	
 }
 
 export type StatusResult = Maybe<{
 	mapping: StatusMapping;
-	status: Maybe<Status>;
+	status?: Maybe<Status>;
 	counts?: Maybe<StatusCounts>;
+	reblog?: Maybe<StatusResult>;
 }>;
 export const statusRequests = new ActiveRequestMap<StatusResult>({ timeout: () => getSettings().statusRequestTimeout });
 
@@ -104,14 +118,19 @@ export async function fetchStatus(hostname: string, id: string) {
 	);
 }
 
-export async function fetchStatusCounts(hostname: string, id: string) {
+export async function fetchStatusCounts(mapping: RemoteMapping<StatusMapping>) {
+	
+	if (!mapping.actualId && shouldHaveActualId(mapping)) {
+		mapping = await findMappingActualId(mapping);
+	}
+	const actualId = mapping.actualId ?? mapping.remoteId;
 
-	const localReference = `${hostname}:${id}`;
+	const localReference = `${mapping.remoteHost}:${mapping.actualId}`;
 
 	const counts = await getStorage().get('localStatusCounts', localReference);
 	if (counts && Date.now() - counts.updated < 600_000) return counts;
 	
-	const res = await fetchStatus(hostname, id);
+	const res = await fetchStatus(mapping.remoteHost, actualId);
 	if (!res?.counts) await getStorage().put('localStatusCounts', {
 		localReference,
 		updated: Date.now(),
@@ -125,9 +144,14 @@ export async function provideStatusMapping(known: MappingData, timeout = getSett
 	
 	const { localHost } = known;
 	const existing = await getStatusMapping(known);
-	if (isFullMapping(existing)) return { mapping: existing, status: null };
+	if (isFullMapping(existing)) {
+		return {
+			mapping: existing,
+			status: null,
+			reblog: maybe(existing?.reblog, mapping => ({ mapping })),
+		};
+	}
 	
-	// this is not supposed to happen unless was cache cleared during use
 	if (isLocalMapping(known)) {
 		const result = await fetchStatus(localHost, known.localId);
 		if (result) return result;
