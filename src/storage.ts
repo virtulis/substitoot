@@ -52,8 +52,18 @@ export interface Storage extends DBSchema {
 let db: IDBPDatabase<Storage>;
 let dbLoaded: Maybe<Promise<IDBPDatabase<Storage>>> = null;
 
+const clearableStores = [
+	'localAccountMapping',
+	'localStatusMapping',
+	'localStatusCounts',
+	'remoteAccountMapping',
+	'remoteStatusMapping',
+	'remoteContextCache',
+	'instances',
+] as const;
+
 export async function initStorage() {
-	dbLoaded = openDB<Storage>('substitoot', 5_00_02, {
+	dbLoaded = openDB<Storage>('substitoot', 5_04_04, {
 		upgrade: async (db, v, _nv, tx) => {
 		
 			const now = Date.now();
@@ -89,6 +99,8 @@ export async function initStorage() {
 			
 			if (v < 5_00_02) db.createObjectStore('localStatusCounts', { keyPath: 'localReference' } );
 			
+			if (v < 5_04_04) for (const s of clearableStores) await tx.objectStore(s).clear();
+			
 		},
 	});
 	db = await dbLoaded;
@@ -110,12 +122,7 @@ export async function clearCache() {
 }
 
 export async function clearMetadata() {
-	await Promise.all(([
-		'localStatusMapping',
-		'remoteStatusMapping',
-		'remoteContextCache',
-		'instances',
-	] as const).map(s => db.clear(s)));
+	for (const s of clearableStores) { await db.clear(s); }
 }
 
 let lastUpdated: Maybe<number>;

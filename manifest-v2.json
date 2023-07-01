@@ -4,7 +4,7 @@
 	"name": "Substitoot — a transparent toot fetcher",
 	"short_name": "Substitoot",
 	"author": "virtulis",
-	"version": "0.5.3",
+	"version": "0.5.4",
 	"homepage_url": "https://github.com/virtulis/substitoot",
 	"icons": {
 		"48": "static/logo.png"
