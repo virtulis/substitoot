@@ -3,7 +3,7 @@
 import { ActiveRequestMap, reportAndNull, sleep } from '../util.js';
 import { InstanceInfo } from '../types.js';
 import { callApi } from './fetch.js';
-import { getStorage } from '../storage.js';
+import { getLastUpdated, getStorage } from '../storage.js';
 import { getSettings } from '../settings.js';
 
 export async function setInstanceInfo(instance: InstanceInfo) {
@@ -17,8 +17,14 @@ export async function fetchInstanceInfo(host: string, force = false): Promise<In
 	
 	if (getSettings().skipInstances.includes(host)) return { host };
 	
+	const lastUpdated = await getLastUpdated();
 	const instance: InstanceInfo = (await getStorage().get('instances', host)) ?? { host };
-	if (!force && instance?.checked && Date.now() - instance.checked < 24 * 3600_000) return instance;
+	if (
+		!force
+		&& instance?.checked
+		&& Date.now() - instance.checked < 24 * 3600_000
+		&& instance.checked > lastUpdated
+	) return instance;
 	
 	return (await instanceRequests.perform(host, () => doFetchInstanceInfo(instance))) ?? { host };
 	
@@ -27,6 +33,8 @@ export async function fetchInstanceInfo(host: string, force = false): Promise<In
 async function doFetchInstanceInfo(instance: InstanceInfo) {
 	
 	const now = Date.now();
+	const prevChecked = instance.checked;
+	
 	instance.lastRequest = now;
 	instance.checked = now;
 	
@@ -69,12 +77,16 @@ async function doFetchInstanceInfo(instance: InstanceInfo) {
 	
 	const version = json.version;
 	if (typeof version == 'string') {
-		if (!!instance.version && version != instance.version) {
+		if (
+			(!!instance.version && version != instance.version)
+			|| (prevChecked && prevChecked < await getLastUpdated())
+		) {
 			instance.canRequestContext = null; // go check again
 		}
 		instance.version = version;
-		instance.isMastodon = !!json.urls?.streaming_api; // dumb random duck typing
-		instance.software = instance.isMastodon ? 'mastodon' : null;
+		const compatible = version.match(/compatible; (\w+)/)?.[1];
+		instance.isMastodon = !compatible && !!json.urls?.streaming_api; // dumb random duck typing
+		instance.software = instance.isMastodon ? 'mastodon' : compatible?.toLowerCase() ?? null;
 	}
 	else {
 		instance.version = null;

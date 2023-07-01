@@ -12,6 +12,7 @@ import {
 	StatusCounts,
 	StatusMapping,
 } from './types.js';
+import { anyBrowser } from './browsers/any.js';
 
 export interface Storage extends DBSchema {
 	localStatusMapping: {
@@ -115,4 +116,11 @@ export async function clearMetadata() {
 		'remoteContextCache',
 		'instances',
 	] as const).map(s => db.clear(s)));
+}
+
+let lastUpdated: Maybe<number>;
+export async function getLastUpdated() {
+	if (lastUpdated) return lastUpdated;
+	lastUpdated = await anyBrowser.storage.local.get('lastUpdated').then(r => r.lastUpdated);
+	return lastUpdated!;
 }

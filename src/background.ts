@@ -28,6 +28,9 @@ async function init() {
 
 asFirefox.runtime.onStartup.addListener(init);
 asFirefox.runtime.onInstalled.addListener(init);
+asFirefox.runtime.onInstalled.addListener(() => {
+	asFirefox.storage.local.set({ lastUpdated: Date.now() });
+});
 
 asFirefox.runtime.onMessage.addListener(async (message) => {
 	if (typeof message != 'object') return;

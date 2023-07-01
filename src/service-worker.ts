@@ -24,6 +24,7 @@ const initPromise = init().catch(reportAndNull);
 asChrome.runtime.onInstalled.addListener(async () => {
 	await initPromise;
 	if (!getSettings().instances.length) asChrome.runtime.openOptionsPage();
+	await asChrome.storage.local.set({ lastUpdated: Date.now() });
 });
 
 asChrome.runtime.onMessage.addListener(async (message) => {
