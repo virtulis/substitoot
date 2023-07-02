@@ -63,7 +63,7 @@ const clearableStores = [
 ] as const;
 
 export async function initStorage() {
-	dbLoaded = openDB<Storage>('substitoot', 5_04_04, {
+	dbLoaded = openDB<Storage>('substitoot', 6_00_00, {
 		upgrade: async (db, v, _nv, tx) => {
 		
 			const now = Date.now();
@@ -99,7 +99,7 @@ export async function initStorage() {
 			
 			if (v < 5_00_02) db.createObjectStore('localStatusCounts', { keyPath: 'localReference' } );
 			
-			if (v < 5_04_04) for (const s of clearableStores) await tx.objectStore(s).clear();
+			if (v < 6_00_00) for (const s of clearableStores) await tx.objectStore(s).clear();
 			
 		},
 	});
