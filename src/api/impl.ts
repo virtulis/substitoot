@@ -3,11 +3,12 @@ import {
 	fetchStatus,
 	fetchStatusCounts,
 	getStatusMapping,
+	mergeStatusLists,
 	processStatusJSON,
 	provideStatusMapping,
 } from '../remapping/statuses.js';
 import { fetchContext, mergeContextResponses } from '../remapping/context.js';
-import { provideAccountMapping } from '../remapping/accounts.js';
+import { fetchAccountStatuses, provideAccountMapping } from '../remapping/accounts.js';
 import { provideNavigationRedirect } from '../remapping/navigation.js';
 import { maybe } from '../util.js';
 import { provideSettings } from '../settings.js';
@@ -24,11 +25,13 @@ export const api = {
 	provideStatusMapping,
 	processStatusJSON,
 	fetchStatusCounts,
+	mergeStatusLists,
 	
 	fetchContext,
 	mergeContextResponses,
 	
 	provideAccountMapping,
+	fetchAccountStatuses,
 	
 	provideNavigationRedirect,
 	

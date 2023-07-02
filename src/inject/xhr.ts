@@ -1,11 +1,11 @@
 import { wrapContextRequest } from './context.js';
 import {
-	wrapStatusPostRequest,
-	wrapRemoteStatusRequest,
 	wrapLocalStatusRequest,
+	wrapRemoteStatusRequest,
+	wrapStatusPostRequest,
 	wrapTimelineRequest,
 } from './status.js';
-import { wrapAccountQueryRequest, wrapAccountRequest } from './account.js';
+import { wrapAccountQueryRequest, wrapAccountRequest, wrapAccountStatusesRequest } from './account.js';
 
 export type PatchedXHR = XMLHttpRequest & {
 	
@@ -62,6 +62,7 @@ export function wrapXHR() {
 			if (method == 'POST' && typeof body == 'string') return wrapStatusPostRequest(this, body);
 		}
 		if (parts[2] == 'accounts') {
+			if (method == 'GET' && parts[4] == 'statuses' && !parts[5]) return wrapAccountStatusesRequest(this, parts, url.searchParams);
 			if (parts[3]?.indexOf('s:') === 0) return wrapAccountRequest(this, parts, body);
 			if (url.search.includes('s:a:')) return wrapAccountQueryRequest(this, url, body);
 		}
@@ -75,7 +76,7 @@ export function wrapXHR() {
 
 }
 
-export function swapInXHR(dest: PatchedXHR, url: string, body: any, responseFilter?: (res: string) => string) {
+export function swapInXHR(dest: PatchedXHR, url: string, body: any, responseFilter?: (res: string) => (string | Promise<string>)) {
 	
 	const { onloadend, onerror, onabort } = dest;
 	
@@ -84,8 +85,8 @@ export function swapInXHR(dest: PatchedXHR, url: string, body: any, responseFilt
 	actual.onerror = onerror;
 	actual.onabort = onabort;
 	
-	actual.onloadend = (ev) => {
-		const response = responseFilter?.(actual.responseText) ?? actual.responseText;
+	actual.onloadend = async (ev) => {
+		const response = await responseFilter?.(actual.responseText) ?? actual.responseText;
 		Object.defineProperty(dest, 'responseText', { value: response });
 		Object.defineProperty(dest, 'status', { value: actual.status });
 		onloadend!.call(actual, ev);

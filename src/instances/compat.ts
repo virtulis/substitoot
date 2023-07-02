@@ -6,7 +6,7 @@ export function shouldHaveActualId(mapping: RemoteMapping<StatusMapping>) {
 	return mapping.uri?.match(/\/objects\/([a-f0-9-]{36})\/?$/);
 }
 
-export async function findMappingActualId(mapping: RemoteMapping<StatusMapping>) {
+export async function findStatusActualId(mapping: RemoteMapping<StatusMapping>) {
 	const xomaObj = mapping.uri?.match(/\/objects\/([a-f0-9-]{36})\/?$/);
 	if (xomaObj) {
 		const res = await callApi(mapping.uri!, { updateInstance: false }, { method: 'HEAD' });

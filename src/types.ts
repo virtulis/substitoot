@@ -43,6 +43,7 @@ export interface Status extends Thing {
 	uri: string;
 	account: Account;
 	content: string;
+	created_at: string;
 	in_reply_to_id?: Maybe<string>;
 	in_reply_to_account_id?: Maybe<string>;
 	
@@ -73,6 +74,7 @@ export interface Account extends Thing {
 
 export interface MappingData {
 	type?: Maybe<'s' | 'a' | string>;
+	uri?: string;
 	localHost: string;
 	localId?: Maybe<string>;
 	remoteHost?: Maybe<string>;
@@ -97,7 +99,6 @@ export interface Mapping extends MappingData {
 	
 }
 export interface StatusMapping extends Mapping {
-	uri?: string;
 	username?: Maybe<string>;
 	reblog?: Maybe<StatusMapping>;
 }

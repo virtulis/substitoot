@@ -150,7 +150,6 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		return;
 	}
 	
-	// FIXME ?
 	for (const list of contextLists) for (const status of remoteResponse[list]) {
 		status.content = DOMPurify.sanitize(status.content);
 	}

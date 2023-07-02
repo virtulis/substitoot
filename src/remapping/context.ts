@@ -18,7 +18,7 @@ import { identifyStatus } from './statuses.js';
 import { callApi } from '../instances/fetch.js';
 import { fetchInstanceInfo, setInstanceInfo } from '../instances/info.js';
 import { contextLists, remapIdFields } from '../ids.js';
-import { findMappingActualId, shouldHaveActualId } from '../instances/compat.js';
+import { findStatusActualId, shouldHaveActualId } from '../instances/compat.js';
 
 export async function mergeContextResponses({ localHost, mapping, localResponse, remoteResponse }: {
 	localHost: string;
@@ -147,14 +147,14 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 		});
 		
 		const [username, host] = account.acct.split('@');
-		const acctHost = host ?? remoteHost;
+		const acctHost = host ?? mapping.remoteHost;
 		const acct = `${username}@${acctHost}`;
 		account.acct = acct;
 		if (accounts.has(acct)) {
 			status.account = accounts.get(acct)!;
 		}
 		else {
-			const acctRef = `${localHost}:${acctHost}:${remoteId}`;
+			const acctRef = `${localHost}:${acctHost}:${username}`;
 			const ex = await remoteAccountStore.get(acctRef);
 			if (isLocalMapping(ex)) {
 				account.id = ex.localId;
@@ -171,9 +171,6 @@ export async function mergeContextResponses({ localHost, mapping, localResponse,
 			}
 			accounts.set(acct, account);
 		}
-		
-		// FIXME
-		// status.content = DOMPurify.sanitize(status.content);
 		
 		status.application = { name: 'Substitoot' };
 		
@@ -218,7 +215,7 @@ export async function fetchContext(mapping: RemoteMapping<StatusMapping>) {
 	if (!instance.isCompatible || instance.canRequestContext === false) return null;
 	
 	if (!mapping.actualId && shouldHaveActualId(mapping)) {
-		mapping = await findMappingActualId(mapping);
+		mapping = await findStatusActualId(mapping);
 	}
 	const actualId = mapping.actualId ?? mapping.remoteId;
 	
