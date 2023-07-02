@@ -86,6 +86,9 @@ export function swapInXHR(dest: PatchedXHR, url: string, body: any, responseFilt
 	actual.onabort = onabort;
 	
 	actual.onloadend = async (ev) => {
+		Object.defineProperty(dest, 'getAllResponseHeaders', {
+			value: () => actual.getAllResponseHeaders().replace('limit=1&', ''),
+		});
 		const response = await responseFilter?.(actual.responseText) ?? actual.responseText;
 		Object.defineProperty(dest, 'responseText', { value: response });
 		Object.defineProperty(dest, 'status', { value: actual.status });
