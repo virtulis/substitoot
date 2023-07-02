@@ -132,7 +132,7 @@ export async function findAccountActualId(mapping: RemoteMapping<AccountMapping>
 
 const statusRequests = new ActiveRequestMap<Status[]>({ timeout: () => getSettings().statusRequestTimeout });
 
-export async function fetchAccountStatuses(mapping: RemoteMapping<AccountMapping>, query: URLSearchParams) {
+export async function fetchAccountStatuses(mapping: RemoteMapping<AccountMapping>, query: string) {
 	
 	const { remoteHost } = mapping;
 	if (getSettings().skipInstances.includes(remoteHost)) return null;

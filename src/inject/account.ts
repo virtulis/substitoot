@@ -43,16 +43,21 @@ export async function wrapAccountQueryRequest(xhr: PatchedXHR, url: URL, body: a
 export async function wrapAccountStatusesRequest(xhr: PatchedXHR, parts: string[], query: URLSearchParams) {
 	
 	const id = parts[3];
-	if (query.has('since_id') || query.has('pinned')) return xhr.__send();
-	
 	const localHost = location.hostname;
+	const shouldSkip = query.has('since_id') || query.has('pinned');
 	const parsed = parseId(localHost, id);
+	
+	if (shouldSkip && isLocalMapping(parsed)) return xhr.__send();
+	
 	const mapping = parsed && await callSubstitoot('provideAccountMapping', parsed);
-	if (!isFullMapping(mapping) || mapping.localHost == mapping.remoteHost) return xhr.__send();
+	const fixedUrl = `/${parts.slice(0, 3).join('/')}/${mapping?.localId}/statuses?${query}`;
+	if (!isFullMapping(mapping) || mapping.localHost == mapping.remoteHost || shouldSkip) {
+		return isLocalMapping(parsed) || !mapping ? xhr.__send() : swapInXHR(xhr, fixedUrl, null);
+	}
 	
 	query.set('limit', '40');
-	const remoteFetch = callSubstitoot('fetchAccountStatuses', mapping, query);
-	swapInXHR(xhr, `/${parts.slice(0, 3).join('/')}/${mapping.localId}/statuses?${query}`, null, async res => {
+	const remoteFetch = callSubstitoot('fetchAccountStatuses', mapping, query.toString());
+	swapInXHR(xhr, fixedUrl, null, async res => {
 		
 		let localStatuses;
 		try {
