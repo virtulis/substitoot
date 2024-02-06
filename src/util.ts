@@ -2,6 +2,7 @@ import { version } from '../package.json';
 import { Maybe, None, Some } from './types.js';
 
 export const packageVersion: string = version;
+export const intVersion = version.split('.').slice(0, 3).reduce((a, n) => a + Number(n) * 100, 0);
 
 type MaybeCB<A, B> = (it: Some<A>) => B;
 

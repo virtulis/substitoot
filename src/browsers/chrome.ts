@@ -1,5 +1,6 @@
 import { provideSettings, Settings } from '../settings.js';
 import { Maybe } from '../types.js';
+import { reportAndNull } from '../util.js';
 
 export async function updateChromeConfig() {
 	
@@ -9,15 +10,13 @@ export async function updateChromeConfig() {
 	
 	const settings = await provideSettings();
 	const { instances } = settings;
-	console.log(instances);
+	
 	if (instances.sort().join(', ') != lastSettings?.instances?.sort().join(', ')) {
 		
 		const matches = instances.map(host => `https://${host}/*`);
 		
 		const ids = ['content'];
 		const [ex] = await scripting.getRegisteredContentScripts({ ids });
-		
-		console.log(matches, ex);
 		
 		if (ex) await scripting.unregisterContentScripts({ ids });
 		
@@ -28,7 +27,7 @@ export async function updateChromeConfig() {
 			matches: instances.map(host => `https://${host}/*`),
 			runAt: 'document_end',
 			persistAcrossSessions: true,
-		}]);
+		}]).catch(reportAndNull);
 		
 	}
 	

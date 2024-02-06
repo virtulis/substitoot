@@ -29,6 +29,6 @@ export async function updateFirefoxConfig() {
 		css: [{ file: 'static/ui.css' }],
 		matches: settings.instances.map(host => `https://${host}/*`),
 		runAt: 'document_end',
-	});
+	}).catch(reportAndNull);
 	
 }

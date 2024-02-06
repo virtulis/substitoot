@@ -2,11 +2,12 @@
 
 import { getSettings, initSettings } from './settings.js';
 import { clearMetadata, initStorage } from './storage.js';
-import { packageVersion, reportAndNull } from './util.js';
+import { intVersion, packageVersion, reportAndNull } from './util.js';
 
 import { setUpAPIPort } from './api/impl.js';
-import { asChrome } from './browsers/any.js';
+import { anyBrowser, asChrome, asFirefox } from './browsers/any.js';
 import { updateChromeConfig } from './browsers/chrome.js';
+import { displayNotice, lastNoticeVersion } from './notice.js';
 
 async function init() {
 	
@@ -20,9 +21,15 @@ async function init() {
 const initPromise = init().catch(reportAndNull);
 
 asChrome.runtime.onInstalled.addListener(async () => {
+	
 	await initPromise;
-	if (!getSettings().instances.length) asChrome.runtime.openOptionsPage();
 	await asChrome.storage.local.set({ lastUpdated: Date.now() });
+	
+	const lastVersion = await anyBrowser.storage.local.get('lastVersion').then(r => r.lastVersion);
+	const settings = getSettings();
+	if (settings.instances.length && (!lastVersion || Number(lastVersion) < lastNoticeVersion)) displayNotice().catch(reportAndNull);
+	await asChrome.storage.local.set({ lastVersion: intVersion });
+	
 });
 
 asChrome.runtime.onMessage.addListener(async (message) => {

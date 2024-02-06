@@ -1,11 +1,12 @@
 // Entry point for the background process of the extension
 
 import { updateFirefoxConfig } from './browsers/firefox.js';
-import { initSettings } from './settings.js';
+import { getSettings, initSettings } from './settings.js';
 import { clearMetadata, initStorage } from './storage.js';
-import { packageVersion } from './util.js';
+import { intVersion, packageVersion, reportAndNull } from './util.js';
 import { setUpAPIPort } from './api/impl.js';
-import { asFirefox } from './browsers/any.js';
+import { anyBrowser, asFirefox } from './browsers/any.js';
+import { displayNotice, lastNoticeVersion } from './notice.js';
 
 let initRun = false;
 async function init() {
@@ -13,7 +14,7 @@ async function init() {
 	if (initRun) return;
 	initRun = true;
 	
-	console.log('init', packageVersion);
+	console.log('init', packageVersion, intVersion);
 	
 	await initStorage();
 	setUpAPIPort();
@@ -23,9 +24,14 @@ async function init() {
 }
 
 asFirefox.runtime.onStartup.addListener(init);
-asFirefox.runtime.onInstalled.addListener(init);
-asFirefox.runtime.onInstalled.addListener(() => {
-	asFirefox.storage.local.set({ lastUpdated: Date.now() });
+asFirefox.runtime.onInstalled.addListener(async () => {
+	await asFirefox.storage.local.set({ lastUpdated: Date.now() });
+	await init();
+	const lastVersion = await anyBrowser.storage.local.get('lastVersion').then(r => r.lastVersion);
+	console.log('lastVersion', lastVersion);
+	const settings = getSettings();
+	if (settings.instances.length && (!lastVersion || Number(lastVersion) < lastNoticeVersion)) displayNotice().catch(reportAndNull);
+	await asFirefox.storage.local.set({ lastVersion: intVersion });
 });
 
 asFirefox.runtime.onMessage.addListener(async (message) => {
