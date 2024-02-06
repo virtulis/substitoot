@@ -1,11 +1,7 @@
 import { wrapContextRequest } from './context.js';
-import {
-	wrapLocalStatusRequest,
-	wrapRemoteStatusRequest,
-	wrapStatusPostRequest,
-	wrapTimelineRequest,
-} from './status.js';
-import { wrapAccountQueryRequest, wrapAccountRequest, wrapAccountStatusesRequest } from './account.js';
+import { wrapLocalStatusRequest } from './status.js';
+import { wrapAccountStatusesRequest } from './account.js';
+import { Maybe } from '../types.js';
 
 export type PatchedXHR = XMLHttpRequest & {
 	
@@ -57,17 +53,10 @@ export function wrapXHR() {
 		
 		if (parts[2] == 'statuses') {
 			if (method == 'GET' && parts[4] == 'context') return wrapContextRequest(this, parts);
-			if (parts[3]?.indexOf('s:') === 0) return wrapRemoteStatusRequest(this, parts, body);
-			if (method == 'GET' && !parts[4]) return wrapLocalStatusRequest(this, parts, body);
-			if (method == 'POST' && typeof body == 'string') return wrapStatusPostRequest(this, body);
+			return wrapLocalStatusRequest(this, parts, body);
 		}
 		if (parts[2] == 'accounts') {
 			if (method == 'GET' && parts[4] == 'statuses' && !parts[5]) return wrapAccountStatusesRequest(this, parts, url.searchParams);
-			if (parts[3]?.indexOf('s:') === 0) return wrapAccountRequest(this, parts, body);
-			if (url.search.includes('s:a:')) return wrapAccountQueryRequest(this, url, body);
-		}
-		if (parts[2] == 'timelines' && method == 'GET') {
-			return wrapTimelineRequest(this, parts, body);
 		}
 		
 		return send.call(this, body);
@@ -76,29 +65,32 @@ export function wrapXHR() {
 
 }
 
-export function swapInXHR(dest: PatchedXHR, url: string, body: any, responseFilter?: (res: string) => (string | Promise<string>)) {
+type MessageHandler = (this: WindowEventHandlers, ev: MessageEvent) => any;
+let messageTarget: Maybe<WindowEventHandlers> = null;
+let messageHandler: Maybe<MessageHandler> = null;
+
+export function callMessageHandler(data: string) {
+	if (!messageHandler) return;
+	return messageHandler.call(messageTarget!, new MessageEvent('message', { data }));
+}
+
+export function wrapWebSocket() {
 	
-	const { onloadend, onerror, onabort } = dest;
-	
-	const actual = new XMLHttpRequest() as PatchedXHR;
-	
-	actual.onerror = onerror;
-	actual.onabort = onabort;
-	
-	actual.onloadend = async (ev) => {
-		Object.defineProperty(dest, 'getAllResponseHeaders', {
-			value: () => actual.getAllResponseHeaders().replace('limit=1&', ''),
-		});
-		const response = await responseFilter?.(actual.responseText) ?? actual.responseText;
-		Object.defineProperty(dest, 'responseText', { value: response });
-		Object.defineProperty(dest, 'status', { value: actual.status });
-		onloadend!.call(actual, ev);
-	};
-	
-	actual.open(dest.__method, url);
-	for (const [name, value] of Object.entries(dest.__headers)) actual.setRequestHeader(name, value);
-	actual.__send(body);
-	
-	return actual;
+	const orig = Object.getOwnPropertyDescriptor(WebSocket.prototype, 'onmessage')!;
+	const setter = orig.set!;
+	Object.defineProperty(WebSocket.prototype, 'onmessage', {
+		...orig,
+		set(fn: MessageHandler | null) {
+			const url = new URL(this.url);
+			if (url.pathname != '/api/v1/streaming/' || !fn) return setter.call(this, fn);
+			// eslint-disable-next-line @typescript-eslint/no-this-alias
+			messageTarget = this;
+			messageHandler = fn;
+			const wrapper: MessageHandler = function (ev) {
+				fn.call(this, ev);
+			};
+			setter.call(this, wrapper);
+		},
+	});
 	
 }

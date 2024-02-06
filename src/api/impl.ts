@@ -1,39 +1,21 @@
-import { fetchInstanceInfo } from '../instances/info.js';
-import {
-	fetchStatus,
-	fetchStatusCounts,
-	getStatusMapping,
-	mergeStatusLists,
-	processStatusJSON,
-	provideStatusMapping,
-} from '../remapping/statuses.js';
-import { fetchContext, mergeContextResponses } from '../remapping/context.js';
-import { fetchAccountStatuses, provideAccountMapping } from '../remapping/accounts.js';
-import { provideNavigationRedirect } from '../remapping/navigation.js';
+import { fetchRemoteStatusAndContext } from '../remote/context.js';
+import { fetchRemoteAccountStatuses } from '../remote/accounts.js';
 import { maybe } from '../util.js';
-import { provideSettings } from '../settings.js';
+import { getSettings, provideSettings } from '../settings.js';
 import { APIRequest, APIResponse } from './api.js';
 import { asFirefox } from '../browsers/any.js';
 import { provideStorage } from '../storage.js';
+import { cacheStatusUri, getStatusUri } from '../worker/cache.js';
 
 export const api = {
 	
-	fetchInstanceInfo,
+	getSettings,
 	
-	fetchStatus,
-	getStatusMapping,
-	provideStatusMapping,
-	processStatusJSON,
-	fetchStatusCounts,
-	mergeStatusLists,
+	fetchRemoteStatusAndContext,
+	fetchRemoteAccountStatuses,
 	
-	fetchContext,
-	mergeContextResponses,
-	
-	provideAccountMapping,
-	fetchAccountStatuses,
-	
-	provideNavigationRedirect,
+	cacheStatusUri,
+	getStatusUri,
 	
 };
 export type API = typeof api;
@@ -42,6 +24,10 @@ export type APIMethod = keyof API;
 export function setUpAPIPort() {
 	
 	asFirefox.runtime.onConnect.addListener(async port => {
+	
+		const respond = (res: APIResponse) => port.postMessage({
+			substitootResponse: res,
+		});
 		
 		port.onMessage.addListener(async msg => {
 			
@@ -52,7 +38,7 @@ export function setUpAPIPort() {
 			
 			const request = msg as APIRequest;
 			
-			if (!valid) port.postMessage(<APIResponse> {
+			if (!valid) return respond({
 				id: request.id,
 				error: `Requests are not allowed from: ${url?.hostname}`,
 			});
@@ -60,14 +46,14 @@ export function setUpAPIPort() {
 			try {
 				const result = await (api[request.method] as Function)(...request.arguments);
 				// console.log(request.method, '<', request.arguments, '>', result);
-				port.postMessage(<APIResponse> {
+				respond({
 					id: request.id,
 					result,
 				});
 			}
 			catch (e) {
 				console.error(e);
-				port.postMessage(<APIResponse> {
+				respond({
 					id: request.id,
 					error: (e as Error)?.message ?? 'Internal error',
 				});

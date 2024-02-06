@@ -20,6 +20,7 @@ export async function updateChromeConfig() {
 		if (matches.length) await scripting.registerContentScripts([{
 			id: 'content',
 			js: ['dist/content.js'],
+			css: ['static/ui.css'],
 			matches: instances.map(host => `https://${host}/*`),
 			runAt: 'document_end',
 			persistAcrossSessions: true,

@@ -6,12 +6,13 @@ const requests = new Map<number, { resolve: (res: any) => void; reject: (error: 
 
 window.addEventListener('message', ev => {
 	if (ev.source != window) return;
-	if (!ev.data.substitootResponse?.id) return;
-	const response = ev.data.substitootResponse as APIResponse;
-	const { resolve, reject } = requests.get(response.id)!;
-	if (response.error) reject(new window.Error(response.error));
-	else resolve(response.result);
-	requests.delete(response.id);
+	if (ev.data.substitootResponse?.id) {
+		const response = ev.data.substitootResponse as APIResponse;
+		const { resolve, reject } = requests.get(response.id)!;
+		if (response.error) reject(new window.Error(response.error));
+		else resolve(response.result);
+		requests.delete(response.id);
+	}
 });
 
 export function callSubstitoot<M extends APIMethod>(method: M, ...args: Parameters<API[M]>) {

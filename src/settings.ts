@@ -1,6 +1,5 @@
 // Extension settings storage (used by both options.ts and background.ts)
 
-import { omit } from './util.js';
 import { Maybe } from './types.js';
 import { anyBrowser } from './browsers/any.js';
 
@@ -9,16 +8,12 @@ export interface Settings {
 	instances: string[];
 	skipInstances: string[];
 	
-	cacheContentMins: number;
-	
-	useRequestFilter: boolean;
-	preloadHome: boolean;
-	bypassFollowed: boolean;
-	
 	statusRequestTimeout: number;
 	contextRequestTimeout: number;
 	searchTimeout: number;
 	instanceCheckTimeout: number;
+	
+	maxParallelSearchReqs: number;
 	
 }
 
@@ -26,15 +21,13 @@ export const defaultSettings: Settings = {
 
 	instances: [],
 	skipInstances: [],
-	cacheContentMins: 30,
-	bypassFollowed: true,
-	preloadHome: false,
-	useRequestFilter: false,
 	
 	statusRequestTimeout: 5_000,
 	contextRequestTimeout: 10_000,
 	searchTimeout: 10_000,
 	instanceCheckTimeout: 5_000,
+	
+	maxParallelSearchReqs: 5,
 	
 };
 

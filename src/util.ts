@@ -91,3 +91,13 @@ export class ActiveRequestMap<T> {
 	}
 
 }
+
+export function decideRequestDelay(res: Response) {
+	const limit = Number(res.headers.get('x-ratelimit-remaining')) - 5;
+	const now = new Date(res.headers.get('date')!);
+	const until = new Date(res.headers.get('x-ratelimit-reset')!);
+	const diff = until.getTime() - now.getTime();
+	const delay = Math.min(5000, Math.max(100, diff / limit));
+	console.log('delay = ', delay, { limit, now, until, diff });
+	return delay;
+}

@@ -1,178 +1,230 @@
-import { contextLists, parseId } from '../ids.js';
-import {
-	ContextResponse,
-	isFullMapping,
-	isLocalMapping,
-	isRemoteMapping,
-	Maybe,
-	RemoteMapping,
-	StatusMapping,
-} from '../types.js';
-import { callSubstitoot } from './call.js';
-import { PatchedXHR } from './xhr.js';
-import { reportAndNull, sleep } from '../util.js';
-import { cleanUpFakeStatuses, maybeUpdateStatusReplyTo, updateRemoteStatusCounts } from './redux.js';
-import DOMPurify from 'dompurify';
 
-let curReqAt = 0;
-let curReqId: Maybe<string> = null;
-let haveSecondReq = false;
-let curShared: Maybe<{
-	mappingRequest?: Promise<Maybe<StatusMapping>>;
-	fullMappingRequest?: Promise<Maybe<StatusMapping>>;
-	localRequest?: Promise<Maybe<ContextResponse>>;
-}> = null;
+import { contextLists, ContextResponse, Maybe, Status } from '../types.js';
+import { callSubstitoot } from './call.js';
+import { callMessageHandler, PatchedXHR } from './xhr.js';
+import { showToast, toastColors } from './toast.js';
+import { decideRequestDelay, reportAndNull } from '../util.js';
+import { patchStatus } from './status.js';
+
+let nextContextRequest = 1;
 
 export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 
+	const pfx = ['wrapContextRequest', nextContextRequest++];
+	const log = (...args: any[]) => {
+		console.log(...pfx, ...args);
+	};
+	
 	const id = parts[3];
-	const localHost = location.hostname;
-	
-	const parsed = parseId(localHost, id);
-	const { onloadend, onerror, onabort } = xhr;
-	// console.log(parsed, onloadend, onerror, onabort);
-	
-	if (!parsed || !onloadend) return xhr.__send();
-	
-	// Tricky concurrency shenanigans.
-	const isSecondReq = curReqId == id && Date.now() - curReqAt < 100;
-	curReqId = id;
-	curReqAt = Date.now();
-	curShared = isSecondReq ? {} : null;
-	haveSecondReq = isSecondReq;
-	// console.log({ isSecondReq, haveSecondReq });
-	
-	// Tricky concurrency shenanigans continued!
-	await sleep(1);
-	const shared = curShared || {};
-	const isFirstReq = haveSecondReq && !isSecondReq;
-	// console.log({ isSecondReq, isFirstReq });
-	
-	// const store = getReduxStore();
-	// console.log({ store });
-	
-	shared.mappingRequest ??= callSubstitoot('getStatusMapping', parsed);
-	let mapping = (await shared.mappingRequest) ?? parsed;
-	// console.log(mapping);
-	
-	if (!mapping || mapping.remoteHost == mapping.localHost) {
-		if (!isSecondReq) {
-			xhr.__send();
-		}
-		else {
-			const localResponse = await shared.localRequest;
-			Object.defineProperty(xhr, 'responseText', { value: JSON.stringify(localResponse) });
-			const event = new ProgressEvent('loadend');
-			Object.defineProperty(event, 'target', { value: xhr });
-			onloadend.call(xhr, event);
-		}
-		return;
+	const instance = location.hostname;
+	const cached = await callSubstitoot('getStatusUri', instance, id);
+	if (cached && new URL(cached.uri).hostname == instance) {
+		log('skip local', id);
+		return xhr.__send();
 	}
 	
-	let event: Maybe<ProgressEvent> = null;
+	log('begin', id, parts);
+	const { onloadend, onerror, onabort } = xhr;
+	if (!onloadend) return xhr.__send();
 	
-	// const fullMapping = isFullMapping(mapping) ? mapping : ;
-	if (!isFullMapping(mapping)) shared.fullMappingRequest ??= callSubstitoot('provideStatusMapping', mapping).then(res => res?.mapping);
+	let canceled = false;
+	const cancel = () => {
+		log('cancel');
+		canceled = true;
+	};
+	const { dot, text, hide } = showToast(cancel);
 	
-	if (!isSecondReq) shared.localRequest = (async () => {
+	let localCount: Maybe<number> = null;
+	let remoteCount: Maybe<number> = null;
+	let loadedCount = 0;
+	let failureCount = 0;
+	let errorInfo: Maybe<string> = null;
+	const showStatus = (color: keyof typeof toastColors) => {
+		dot.style.backgroundColor = toastColors[color];
+		text.textContent = errorInfo || `${localCount ?? '·'} + ${loadedCount ?? '·'} / ${remoteCount ?? '·'} ${failureCount ? `- ${failureCount} failed` : ''}`;
+	};
+	showStatus('init');
+	const fail = (info: string) => {
+		errorInfo = info;
+		showStatus('failed');
+		setTimeout(hide, 5000);
+	};
 	
-		if (!isLocalMapping(mapping)) mapping = (await shared.fullMappingRequest) ?? mapping ?? parsed;
+	(async () => {
 		
-		let actual: PatchedXHR;
-		if (isLocalMapping(parsed) || !isLocalMapping(mapping)) {
-			actual = xhr;
-		}
-		else {
-			const url = `/${parts.map(p => p == id ? mapping!.localId : p).join('/')}`;
-			actual = new XMLHttpRequest() as PatchedXHR;
-			actual.open(xhr.__method, url);
-			for (const [name, value] of Object.entries(xhr.__headers)) actual.setRequestHeader(name, value);
-		}
-		
-		return await new Promise<Maybe<ContextResponse>>(resolve => {
-			actual.onloadend = (ev: ProgressEvent) => {
-				event = ev;
+		const localResponse = await new Promise<Maybe<ContextResponse>>(resolve => {
+			xhr.onloadend = (ev: ProgressEvent) => {
 				try {
-					const json = JSON.parse(actual.responseText);
-					if (!json.descendants) {
-						console.error(json);
-						return resolve(null);
+					const json = JSON.parse(xhr.responseText);
+					if (json.descendants) {
+						resolve(json);
 					}
-					resolve(json);
+					else {
+						console.error(json);
+						resolve(null);
+					}
 				}
 				catch (e) {
 					console.error(e);
-					console.error(actual.status);
+					console.error(xhr.status);
 					resolve(null);
 				}
-				if (haveSecondReq) onloadend.call(actual, ev);
+				onloadend.call(xhr, ev);
 			};
-			actual.onerror = (ev) => {
+			xhr.onerror = (ev) => {
 				resolve(null);
-				onerror?.call(actual, ev);
+				onerror?.call(xhr, ev);
 			};
-			actual.onabort = (ev) => {
+			xhr.onabort = (ev) => {
 				resolve(null);
-				onabort?.call(actual, ev);
+				onabort?.call(xhr, ev);
 			};
-			actual.__send();
+			xhr.__send();
 		});
+		if (canceled) return;
 		
-	})();
-	
-	if (isFirstReq) return;
-	
-	const remoteRequest = (async () => {
+		if (!localResponse) return fail('Local request failed?');
+		log('localResponse', localResponse);
 		
-		if (!isRemoteMapping(mapping)) mapping = (await shared.fullMappingRequest) ?? mapping;
-		if (!isRemoteMapping(mapping)) return;
+		const settings = await callSubstitoot('getSettings');
 		
-		callSubstitoot('fetchStatusCounts', mapping as RemoteMapping<StatusMapping>)
-			.then(res => res && updateRemoteStatusCounts(mapping as RemoteMapping, res))
-			.catch(reportAndNull);
+		const knownIds = new Set<string>([id]);
+		for (const list of contextLists) for (const st of localResponse[list]) {
+			knownIds.add(st.id);
+		}
+		localCount = knownIds.size;
+		showStatus('initMore');
 		
-		return await callSubstitoot('fetchContext', mapping as RemoteMapping<StatusMapping>);
+		const mainStatus: Status = await fetch(`/api/v1/statuses/${id}`).then(res => res.json());
+		if (mainStatus) await callSubstitoot('cacheStatusUri', { instance, id, uri: mainStatus.uri });
+		if (canceled) return;
 		
-	})();
-	
-	const remoteResponse = await remoteRequest;
-	const localResponse = await shared.localRequest;
-	
-	// console.log({ localResponse, remoteResponse, isFirstReq, isSecondReq, haveSecondReq });
-	
-	if (!event) {
-		event = new ProgressEvent('loadend');
-		Object.defineProperty(event, 'target', { value: xhr });
-	}
-	
-	if (!remoteResponse || !isRemoteMapping(mapping)) {
-		onloadend.call(xhr, event);
-		return;
-	}
-	
-	for (const list of contextLists) for (const status of remoteResponse[list]) {
-		status.content = DOMPurify.sanitize(status.content);
-	}
-	
-	const merged = await callSubstitoot('mergeContextResponses', {
-		mapping,
-		localHost,
-		localResponse,
-		remoteResponse,
+		const known = new Set<string>([mainStatus.uri]);
+		for (const list of contextLists) for (const st of localResponse[list]) {
+			known.add(st.uri);
+		}
+		log('known', known);
+		
+		const url = new URL(mainStatus.uri);
+		if (url.hostname == instance) {
+			showStatus('success');
+			hide();
+			return;
+		}
+		
+		showStatus('localSuccess');
+		const remoteResponse = await callSubstitoot('fetchRemoteStatusAndContext', mainStatus.uri);
+		log('remoteResponse', remoteResponse);
+		if (canceled) return;
+		if (!remoteResponse) return fail('Could not fetch remote status');
+		
+		if (remoteResponse.counts) {
+			patchStatus(mainStatus.id, remoteResponse.counts);
+			const payload = JSON.stringify({ ...mainStatus, ...remoteResponse.counts });
+			const data = JSON.stringify({
+				stream: ['user'],
+				event: 'status.update',
+				payload,
+			});
+			callMessageHandler(data);
+		}
+		
+		const remoteContext = remoteResponse?.context;
+		if (!remoteContext) return fail('Could not fetch remote context');
+		
+		const missing = new Set<string>();
+		for (const list of contextLists) for (const st of remoteContext[list]) {
+			if (!known.has(st.uri)) missing.add(st.uri);
+		}
+		remoteCount = missing.size;
+		loadedCount = 0;
+		log('missing', missing);
+		
+		showStatus('inProgress');
+		const active = new Set<Promise<any>>();
+		const readyChildren = new Map<string, Status[]>;
+		const maxActive = settings.maxParallelSearchReqs;
+		const emit = (status: Status) => {
+			if (canceled) return;
+			log('emit', status);
+			knownIds.add(status.id);
+			const payload = JSON.stringify(status);
+			const data = JSON.stringify({
+				stream: ['user'],
+				event: 'update',
+				payload,
+			});
+			callMessageHandler(data);
+		};
+		const addChild = (child: Status) => {
+			const parId = child.in_reply_to_id;
+			log('addChild', child.id, parId, knownIds.has(parId!));
+			if (!parId || knownIds.has(parId)) {
+				emit(child);
+				const arr = readyChildren.get(child.id);
+				if (arr) {
+					readyChildren.delete(child.id);
+					for (const child of arr) emit(child);
+				}
+			}
+			else {
+				let arr = readyChildren.get(parId);
+				if (!arr) {
+					arr = [];
+					readyChildren.set(parId, arr);
+				}
+				arr.push(child);
+			}
+			callSubstitoot('cacheStatusUri', { instance, id: child.id, uri: child.uri }).catch(reportAndNull);
+		};
+		let last = 0;
+		let delay = 200;
+		for (const uri of missing) {
+		
+			if (active.size >= maxActive) await Promise.race(active);
+			const now = Date.now();
+			if (now - last < delay) await new Promise(resolve => setTimeout(resolve, delay - (now - last)));
+			if (canceled) return;
+			last = Date.now();
+			
+			log('resolve', uri);
+			const promise = (async () => {
+				
+				const search = `/api/v2/search?q=${uri}&resolve=true&limit=1&type=statuses`;
+				const res = await fetch(search);
+				loadedCount++;
+				if (res.headers.has('x-ratelimit-remaining') && res.headers.has('date')) {
+					delay = decideRequestDelay(res);
+				}
+				if (res.status >= 400) {
+					delay = 2000;
+					failureCount++;
+					return;
+				}
+				const json = await res.json();
+				
+				const status = json.statuses?.[0] ?? null;
+				if (status) addChild(status);
+				else failureCount++;
+				
+				showStatus(failureCount ? 'partFailed' : 'inProgress');
+				
+			})().catch(reportAndNull);
+			active.add(promise);
+			promise.finally(() => active.delete(promise));
+			
+		}
+		
+		await Promise.all(active);
+		
+		failureCount += [...readyChildren.values()].flat(1).length;
+		
+		showStatus(failureCount ? 'partSuccess' : 'success');
+		setTimeout(hide, 2000);
+		
+	})().catch(e => {
+		console.error(e);
+		fail('Error (see console)');
 	});
-	
-	// console.log(merged);
-	
-	const parent = merged.ancestors[merged.ancestors.length - 1];
-	if (parent && isLocalMapping(mapping)) await maybeUpdateStatusReplyTo(mapping, {
-		in_reply_to_id: parent.id,
-		in_reply_to_account_id: parent.account.id,
-	});
-	
-	Object.defineProperty(xhr, 'responseText', { value: JSON.stringify(merged) });
-	onloadend.call(xhr, event);
-	
-	const cleanUpIds = merged.descendants.filter(s => s.substitoot_fake_id).map(s => ({ realId: s.id, fakeId: s.substitoot_fake_id! }));
-	if (cleanUpIds.length) await cleanUpFakeStatuses(cleanUpIds);
 	
 }

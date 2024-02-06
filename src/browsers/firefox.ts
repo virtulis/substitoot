@@ -4,26 +4,15 @@
 import { getSettings } from '../settings.js';
 import { reportAndNull } from '../util.js';
 import { Maybe } from '../types.js';
-import { historyListener, navigationListener } from './navigation.js';
 
 let settingsOpenedOnce = false;
 let contentScript: Maybe<browser.contentScripts.RegisteredContentScript>;
 
 export async function updateFirefoxConfig() {
 	
-	const { webNavigation, contentScripts, runtime } = browser;
-	
-	if (!webNavigation) {
-		console.error('permissions broken');
-		if (!settingsOpenedOnce) await runtime.openOptionsPage();
-		settingsOpenedOnce = true;
-		return;
-	}
+	const { contentScripts, runtime } = browser;
 	
 	const settings = getSettings();
-	
-	webNavigation.onCompleted.removeListener(navigationListener);
-	webNavigation.onHistoryStateUpdated.removeListener(historyListener);
 	
 	await contentScript?.unregister().catch(reportAndNull);
 	contentScript = null;
@@ -37,6 +26,7 @@ export async function updateFirefoxConfig() {
 	
 	contentScript = await contentScripts.register({
 		js: [{ file: 'dist/content.js' }],
+		css: [{ file: 'static/ui.css' }],
 		matches: settings.instances.map(host => `https://${host}/*`),
 		runAt: 'document_end',
 	});

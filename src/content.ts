@@ -18,7 +18,8 @@ function inject() {
 	const connect = () => {
 		port = asChrome.runtime.connect();
 		port.onMessage.addListener(msg => {
-			window.postMessage({ substitootResponse: msg }, window.origin);
+			console.log('msg', msg);
+			window.postMessage(msg, window.origin);
 		});
 		port.onDisconnect.addListener(() => {
 			port = null;

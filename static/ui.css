@@ -1,0 +1,32 @@
+/*noinspection CssUnresolvedCustomProperty*/
+.substitoast {
+	--width: 200px;
+	position: fixed;
+	bottom: 20px;
+	width: var(--width);
+	left: calc(50% - calc(var(--width) / 2));
+	background: var(--dropdown-background-color);
+	border: 1px solid var(--dropdown-border-color);
+	border-radius: 4px;
+	box-shadow: var(--dropdown-shadow);
+	padding: 10px;
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	gap: 10px;
+	pointer-events: none;
+	opacity: 0;
+	transition: opacity .5s;
+}
+
+.substitoast--visible {
+	pointer-events: all;
+	opacity: 1;
+}
+
+.substitoast__dot {
+	width: 1em;
+	height: 1em;
+	border-radius: 50%;
+	background: #999;
+}

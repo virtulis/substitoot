@@ -59,70 +59,32 @@ export interface Status extends Thing {
 	
 }
 
+export type StatusUriTriple = {
+	instance: string;
+	id: string;
+	uri: string;
+};
+
 export interface StatusCounts {
-	updated: number;
-	localReference: string;
 	replies_count?: number;
 	reblogs_count?: number;
 	favourites_count?: number;
 }
 
 export interface Account extends Thing {
+	uri: string;
 	username?: Maybe<string>;
 	acct: string;
-}
-
-export interface MappingData {
-	type?: Maybe<'s' | 'a' | string>;
-	uri?: string;
-	localHost: string;
-	localId?: Maybe<string>;
-	remoteHost?: Maybe<string>;
-	remoteId?: Maybe<string>;
-	actualId?: Maybe<string>;
-}
-export interface Mapping extends MappingData {
-
-	updated: number;
-	
-	/**
-	 * localHost:localId
-	 */
-	localReference?: Maybe<string>;
-	
-	/**
-	 * localHost:remoteHost:remoteId
-	 *
-	 * Used to look up existing local status (if any) by localHost and the remote reference.
-	 */
-	remoteReference?: Maybe<string>;
-	
-}
-export interface StatusMapping extends Mapping {
-	username?: Maybe<string>;
-	reblog?: Maybe<StatusMapping>;
-}
-export interface AccountMapping extends Mapping {
-	followedSince?: Maybe<number>;
-}
-
-export type LocalMapping<T extends MappingData = MappingData> = T & { localId: string } & (T extends Mapping ? { localReference: string } : {});
-export type RemoteMapping<T extends MappingData = MappingData> = T & { remoteId: string; remoteHost: string } & (T extends Mapping ? { remoteReference: string } : {});
-export type FullMapping<T extends MappingData = MappingData> = LocalMapping<RemoteMapping<T>>;
-
-export function isLocalMapping<T extends MappingData>(it: Maybe<T>): it is LocalMapping<T> {
-	return !!it?.localId;
-}
-export function isRemoteMapping<T extends MappingData>(it: Maybe<T>): it is RemoteMapping<T> {
-	return !!it?.remoteHost && !!it?.remoteId;
-}
-export function isFullMapping<T extends MappingData>(it: Maybe<T>): it is FullMapping<T> {
-	return isLocalMapping(it) && isRemoteMapping(it);
 }
 
 export interface ContextResponse {
 	ancestors: Status[];
 	descendants: Status[];
+}
+export interface RemoteStatusResponse {
+	status: Maybe<Status>;
+	context: Maybe<ContextResponse>;
+	counts: Maybe<StatusCounts>;
 }
 
 export interface InstanceInfo {
@@ -137,4 +99,8 @@ export interface InstanceInfo {
 	lastRequestSucceeded?: Maybe<boolean>;
 	lastErrorCode?: Maybe<number>;
 	canRequestContext?: Maybe<boolean>;
+	canRequestUser?: Maybe<boolean>;
 }
+
+export const contextLists = ['ancestors', 'descendants'] as const;
+export const countsKeys = ['replies_count', 'reblogs_count', 'favourites_count'] as const;

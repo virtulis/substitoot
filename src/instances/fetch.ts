@@ -1,4 +1,4 @@
-// Wrapper to make a HTTP request to remote instances
+// Wrapper to make an HTTP request to remote instances
 
 import { InstanceInfo, Maybe } from '../types.js';
 import { packageVersion } from '../util.js';
@@ -27,6 +27,7 @@ export async function callApi(
 	if (instance && updateInstance !== false) {
 		promise = promise
 			.then(res => {
+				console.log(res.headers);
 				if (!instance) return res;
 				instance.lastRequestSucceeded = res.ok;
 				if (!res.ok) instance.lastErrorCode = res.status;

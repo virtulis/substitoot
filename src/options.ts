@@ -3,6 +3,7 @@
 import { computePermissions, defaultSettings, Settings } from './settings.js';
 import { reportAndNull } from './util.js';
 import { anyBrowser, asChrome, maybeFirefox } from './browsers/any.js';
+import { Maybe } from './types.js';
 
 let settings = { ...defaultSettings };
 const keys = Object.keys(settings) as Array<keyof Settings>;
@@ -11,7 +12,7 @@ const inputs = Object.fromEntries(keys.map(k => [
 	document.getElementById(k),
 ]).filter(e => e[1])) as Record<keyof Settings, HTMLInputElement>;
 
-let focused: HTMLInputElement | null = null;
+let focused: Maybe<HTMLInputElement> = null;
 Object.values(inputs).forEach(el => {
 	el.addEventListener('focus', () => focused = el);
 	el.addEventListener('blur', () => focused = (focused == el) ? null : focused);
@@ -22,17 +23,16 @@ function updateUI() {
 		if (focused == inputs[key]) continue;
 		inputs[key].value = settings[key].join(', ');
 	}
-	for (const key of ['cacheContentMins'] as const) {
-		if (focused == inputs[key]) continue;
-		inputs[key].value = String(settings[key]);
-	}
-	for (const key of [
-		'bypassFollowed',
-		'preloadHome',
-		'useRequestFilter',
-	] as const) {
-		inputs[key].checked = settings[key];
-	}
+	// for (const key of ['cacheContentMins'] as const) {
+	// 	if (focused == inputs[key]) continue;
+	// 	inputs[key].value = String(settings[key]);
+	// }
+	// for (const key of [
+	// 	'bypassFollowed',
+	// 	'preloadHome',
+	// ] as const) {
+	// 	inputs[key].checked = settings[key];
+	// }
 }
 
 async function load() {
@@ -72,24 +72,23 @@ for (const key of ['instances', 'skipInstances'] as const) {
 		if (key == 'instances') requestPermissions();
 	});
 }
-for (const key of ['cacheContentMins'] as const) {
-	inputs[key].addEventListener('input', () => {
-		const num = Number(inputs[key].value);
-		if (!isFinite(num)) return;
-		settings[key] = num;
-		save();
-	});
-}
-for (const key of ['bypassFollowed', 'preloadHome', 'useRequestFilter'] as const) {
-	inputs[key].addEventListener('change', () => {
-		settings[key] = inputs[key].checked;
-		save();
-	});
-}
+// for (const key of ['cacheContentMins'] as const) {
+// 	inputs[key].addEventListener('input', () => {
+// 		const num = Number(inputs[key].value);
+// 		if (!isFinite(num)) return;
+// 		settings[key] = num;
+// 		save();
+// 	});
+// }
+// for (const key of ['bypassFollowed', 'preloadHome'] as const) {
+// 	inputs[key].addEventListener('change', () => {
+// 		settings[key] = inputs[key].checked;
+// 		save();
+// 	});
+// }
 
 document.getElementById('fixPermissions')!.addEventListener('click', requestPermissions);
 
-document.getElementById('clearCache')!.addEventListener('click', () => asChrome.runtime.sendMessage({ command: 'clearCache' }));
 document.getElementById('clearMetadata')!.addEventListener('click', () => asChrome.runtime.sendMessage({ command: 'clearMetadata' }));
 
 asChrome.storage.sync.onChanged.addListener(load);

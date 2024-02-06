@@ -4,18 +4,17 @@
 	"name": "Substitoot — a transparent toot fetcher",
 	"short_name": "Substitoot",
 	"author": "virtulis",
-	"version": "0.6.2",
+	"version": "0.7.0",
 	"homepage_url": "https://github.com/virtulis/substitoot",
 	"icons": {
 		"48": "static/logo.png"
 	},
 	"permissions": [
 		"storage",
-		"webRequest",
-		"webRequestBlocking",
-		"webNavigation",
-		"scripting",
-		"<all_urls>"
+		"scripting"
+	],
+	"optional_permissions": [
+		"https://*/*"
 	],
 	"options_ui": {
 		"page": "static/options.html",
