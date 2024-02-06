@@ -5,66 +5,52 @@ Mastodon often fails to show up-to-date context and information on posts from re
 * See all the replies to any post on your home instance. Local and remote replies are now loaded in parallel, so there is no extra delay.
 * Interact with all the remote posts as normal. They will be fetched to your instance as needed.
 * See up-to-date boost/favorite counts on posts.
-* (new!) See the last 40 posts in any user's profile. 
+* See the *actual* last 20 posts in any user's profile (page refresh may be needed). 
 
 It should work reliably on mainline Mastodon versions 4.0 and up, your mileage may vary for older instances or forks.
 
 ## Missing features
 
-* The extension currently does not account for personal block lists. Implementing this is the next top priority.
-* Viewing the full history of user's posts is not implemented (and really tricky to combine with the local results, so probably not happening).
+* The extension currently does not account for personal block lists.
 * Only Mastodon is supported as the home instance.
-* Can only fetch info from remote Mastodon, Pleroma and Akkoma (see explanation below).
 
 ## Installation
 
 * Firefox: install the latest release from [addons.mozilla.org](https://addons.mozilla.org/firefox/addon/substitoot/).
 * Chrome: install from [Chrome Web Store](https://chrome.google.com/webstore/detail/substitoot-%E2%80%94-a-transparen/oedncfcpfcmehalbpdnekgaaldefpaef).
-* Android: installing addons is possible with [Firefox Nightly](https://play.google.com/store/apps/details?id=org.mozilla.fenix) and [Fennec F-Droid](https://f-droid.org/en/packages/org.mozilla.fennec_fdroid/). It's [somewhat cumbersome](https://www.maketecheasier.com/install-addon-firefox-android/) but it does work.
+* Android: it should now be possible to install on Firefox on Android by directly going to [the addon page](https://addons.mozilla.org/firefox/addon/substitoot/).
 
 Make sure to open the addon settings and type in the instances it should be active on!
 
 ## Questions and answers
 
-### Why do you want to "access my data on all websites" in Firefox?
+### It doesn't seem to do anything!
 
-The extension is provided both for desktop and mobile versions of Firefox, and it doesn't seem to support requesting permissions at runtime on Android.
+Please check that you have entered the instance domain name in the extension settings, and that it doesn't complain about permissions. If upgrading, you might need to delete the extension completely, restart the browser and install again.
 
-I'll see if I can upload separate builds, then on desktop it will ask for permissions as needed. Rest assured, it does not do anything on the domains you haven't listed.
-
-Well, except for the requests to the other instances to fetch things.
+If nothing helps, please report a bug. Thanks!
 
 ### Does this support servers other than Mastodon?
 
-Somewhat. Pleroma/Akkoma have a similar API, so they are now supported. Currently, I use only the Mastodon-specific API both locally and remotely, and the responses I get from the remote instances are passed on to the Web UI mostly unchanged.
+It can fetch statuses and contexts from Akkoma/Pleroma and Misskey/FireFish/Sharkey/IceShrimp/etc.
 
-Adding support for either ActivityPub itself, or other specific software (like Calckey/Misskey), will require a translation layer.
-
-Also, in any case, fetching this information requires that it be publicly accessible in the first place. Some instances do not seem to publicly provide post context in any form.
+As of 0.7.0 it might do *something* if you attempt to use it on an Akkoma/Pleroma home instance, but I don't have one to check.
 
 ### How does this work internally?
 
-The extension intercepts certain mastodon API HTTP requests on the selected instances.
+The extension intercepts the requests and responses to a status context and a user status list, then fetches the same from the origin server and uses the home instance's search function to fetch the missing replies/posts one by one.
 
-For requests to `/statuses/ID/context` API, it blocks the response and makes a corresponding request to the origin server of the toot in question.
+The fetched replies are then fed into the existing streaming websocket handler of the web app which renders them where needed (hopefully).
 
-If a remote response is successfully received, it appends any toots that are missing. Since normally toots will have an ID that is local to the user's instance, instead a fake one is assigned.
+A similar mechanism is used to update the status counts to those from the origin server.
 
-If you click on a toot with a fake ID, the extension will try to intercept it and fetch the toot properly this time (via your instance's search function). This only works if you are logged in.
-
-Since version 0.5, the interception is done by injecting a wrapper around XMLHttpRequest, since that provides more flexibility.
-
-I also attempt to gain access to the Redux store used by the web UI. Since everything is webpacked and minified, this is actually the easiest way to interact with the app.
-
-The parallel context loading is done by, first, intercepting a dispatched context request at the Redux store level, then dispatching the same identical for request a second time, figuring out which one is which when both are intercepted, and then handling them differently in parallel. The code for this looks absolutely ridiculous.
+Before 0.7.0 the mechanism was much more convoluted and returned fake "local" copies of remote statuses, this is no longer the case.
 
 ### Is it secure?
 
-Toot content is returned from the API calls as HTML code. Content of remote toots is passed through an HTML sanitizer to prevent any potential XSS.
+The extension makes HTTPS requests directly to the instance of the viewed post or user, so they will see your IP address, but no other info is shared.
 
-Additionally, Mastodon has a strict Content-Security-Policy set by default, including no inline scripts.
-
-So, *I think it's secure enough*?
+As of 0.7.0, all content displayed in the web app is passed through the home server, so it is no less secure than normal Mastodon usage.
 
 ## Building
 	

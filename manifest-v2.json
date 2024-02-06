@@ -1,7 +1,7 @@
 {
 	"description": "Loads missing replies to boosted toots directly from the source server.",
 	"manifest_version": 2,
-	"name": "Substitoot — a transparent toot fetcher",
+	"name": "Substitoot — improved Mastodon federation",
 	"short_name": "Substitoot",
 	"author": "virtulis",
 	"version": "0.7.0.3",
