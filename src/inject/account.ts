@@ -134,7 +134,7 @@ export async function wrapAccountStatusesRequest(xhr: PatchedXHR, parts: string[
 			const payload = JSON.stringify(status);
 			const data = JSON.stringify({
 				stream: ['user'],
-				event: 'update',
+				event: 'status.update',
 				payload,
 			});
 			callMessageHandler(data);

@@ -69,6 +69,10 @@ type MessageHandler = (this: WebSocket, ev: MessageEvent) => any;
 let webSocket: Maybe<WebSocket> = null;
 let messageHandler: Maybe<MessageHandler> = null;
 
+export function haveMessageHandler() {
+	return !!messageHandler;
+}
+
 export function callMessageHandler(data: string) {
 	if (!messageHandler) return;
 	return messageHandler.call(webSocket!, new MessageEvent('message', { data }));

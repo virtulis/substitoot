@@ -4,8 +4,10 @@
 import { wrapWebSocket, wrapXHR } from './inject/xhr.js';
 import { wrapHistory } from './inject/navigation.js';
 import { injectToast } from './inject/toast.js';
+import { observeForRedux } from './inject/redux.js';
 
 wrapXHR();
 wrapWebSocket();
 wrapHistory();
 injectToast();
+observeForRedux();

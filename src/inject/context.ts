@@ -1,10 +1,10 @@
-
 import { contextLists, ContextResponse, Maybe, Status } from '../types.js';
 import { callSubstitoot } from './call.js';
-import { callMessageHandler, PatchedXHR } from './xhr.js';
+import { callMessageHandler, haveMessageHandler, PatchedXHR } from './xhr.js';
 import { showToast, toastColors } from './toast.js';
 import { decideRequestDelay, reportAndNull } from '../util.js';
 import { patchStatus } from './status.js';
+import { getReduxStore } from './redux.js';
 
 let nextContextRequest = 1;
 
@@ -140,47 +140,72 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		if (!remoteContext) return fail('Could not fetch remote context');
 		
 		const missing = new Set<string>();
-		for (const list of contextLists) for (const st of remoteContext[list]) {
+		// Ancestors are already fetched by now if it was at all possible. Simplifies the redux bs above.
+		for (const st of remoteContext.descendants) {
 			if (!known.has(st.uri)) missing.add(st.uri);
 		}
 		remoteCount = missing.size;
 		loadedCount = 0;
 		log('missing', missing);
 		
+		const allDescendants = [...localResponse.descendants];
+		
 		showStatus('inProgress');
 		const active = new Set<Promise<any>>();
 		const readyChildren = new Map<string, Status[]>;
 		const maxActive = settings.maxParallelSearchReqs;
-		const emit = (status: Status) => {
+		let emitQ = Promise.resolve();
+		const emit = async (statuses: Status[]) => {
+		
 			if (canceled) return;
-			log('emit', status);
-			knownIds.add(status.id);
-			const payload = JSON.stringify(status);
-			const data = JSON.stringify({
-				stream: ['user'],
-				event: 'update',
-				payload,
+			log('emit', statuses);
+			
+			// this triggers importFetchedStatus and populates the stores
+			for (const status of statuses) {
+				knownIds.add(status.id);
+				allDescendants.push(status);
+				const payload = JSON.stringify(status);
+				const data = JSON.stringify({
+					stream: ['user'],
+					event: 'status.update',
+					payload,
+				});
+				callMessageHandler(data);
+			}
+			
+			// wait for the handlers to all that garbage above to fire
+			await new Promise(resolve => setTimeout(resolve, 50));
+			
+			// this triggers normalizeContext and actually puts the status on the screen (hopefully)
+			getReduxStore()?.dispatch((dispatch, getState) => {
+				dispatch({
+					type: 'CONTEXT_FETCH_SUCCESS',
+					id,
+					ancestors: [],
+					descendants: statuses,
+					statuses: statuses,
+				});
 			});
-			callMessageHandler(data);
+			
 		};
 		const addChild = (child: Status) => {
 			const parId = child.in_reply_to_id;
 			log('addChild', child.id, parId, knownIds.has(parId!));
-			if (!parId || knownIds.has(parId)) {
-				emit(child);
+			if (parId && knownIds.has(parId) && haveMessageHandler() && getReduxStore()) {
 				const arr = readyChildren.get(child.id);
-				if (arr) {
-					readyChildren.delete(child.id);
-					for (const child of arr) emit(child);
-				}
+				emitQ = emitQ.then(() => emit([child, ...(arr || [])]));
+				readyChildren.delete(child.id);
 			}
-			else {
+			else if (parId) {
 				let arr = readyChildren.get(parId);
 				if (!arr) {
 					arr = [];
 					readyChildren.set(parId, arr);
 				}
 				arr.push(child);
+			}
+			else {
+				console.log('no parent', child);
 			}
 			callSubstitoot('cacheStatusUri', { instance, id: child.id, uri: child.uri }).catch(reportAndNull);
 		};
@@ -224,7 +249,9 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		
 		await Promise.all(active);
 		
-		failureCount += [...readyChildren.values()].flat(1).length;
+		const left = [...readyChildren.values()].flat(1);
+		failureCount += left.length;
+		if (left.length) emitQ.then(() => emit(left));
 		
 		showStatus(failureCount ? 'partSuccess' : 'success');
 		setTimeout(hide, 2000);
