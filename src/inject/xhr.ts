@@ -65,32 +65,25 @@ export function wrapXHR() {
 
 }
 
-type MessageHandler = (this: WindowEventHandlers, ev: MessageEvent) => any;
-let messageTarget: Maybe<WindowEventHandlers> = null;
+type MessageHandler = (this: WebSocket, ev: MessageEvent) => any;
+let webSocket: Maybe<WebSocket> = null;
 let messageHandler: Maybe<MessageHandler> = null;
 
 export function callMessageHandler(data: string) {
 	if (!messageHandler) return;
-	return messageHandler.call(messageTarget!, new MessageEvent('message', { data }));
+	return messageHandler.call(webSocket!, new MessageEvent('message', { data }));
 }
 
 export function wrapWebSocket() {
-	
-	const orig = Object.getOwnPropertyDescriptor(WebSocket.prototype, 'onmessage')!;
-	const setter = orig.set!;
-	Object.defineProperty(WebSocket.prototype, 'onmessage', {
-		...orig,
-		set(fn: MessageHandler | null) {
-			const url = new URL(this.url);
-			if (url.pathname != '/api/v1/streaming/' || !fn) return setter.call(this, fn);
-			// eslint-disable-next-line @typescript-eslint/no-this-alias
-			messageTarget = this;
-			messageHandler = fn;
-			const wrapper: MessageHandler = function (ev) {
-				fn.call(this, ev);
-			};
-			setter.call(this, wrapper);
-		},
-	});
-	
+	const send = WebSocket.prototype.send;
+	WebSocket.prototype.send = function (arg: string | ArrayBufferLike | Blob | ArrayBufferView) {
+		send.call(this, arg);
+		if (webSocket == this) return;
+		console.log('wrapWebSocket', this.url);
+		const url = new URL(this.url);
+		if (url.pathname != '/api/v1/streaming/' || !this.onmessage) return;
+		// eslint-disable-next-line @typescript-eslint/no-this-alias
+		webSocket = this;
+		messageHandler = this.onmessage;
+	};
 }

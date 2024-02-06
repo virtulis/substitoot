@@ -46,6 +46,7 @@ export interface Status extends Thing {
 	created_at: string;
 	in_reply_to_id?: Maybe<string>;
 	in_reply_to_account_id?: Maybe<string>;
+	visibility?: string;
 	
 	application?: Maybe<{ name?: Maybe<string> }>;
 	

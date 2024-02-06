@@ -24,8 +24,9 @@ const clearableStores = [
 ] as const;
 
 export async function initStorage() {
-	dbLoaded = openDB<Storage>('substitoot', 6_00_01, {
-		upgrade: async (db, v, _nv, _tx) => {
+	dbLoaded = openDB<Storage>('substitoot', 7_00_02, {
+		upgrade: async (db, v, _nv, tx) => {
+			console.log('ups?');
 			
 			if (v < 4_00_00 && !db.objectStoreNames.contains('instances')) db.createObjectStore('instances', { keyPath: 'host' } );
 			
@@ -43,6 +44,8 @@ export async function initStorage() {
 				}
 				
 				if (!db.objectStoreNames.contains('instanceStatusUris')) db.createObjectStore('instanceStatusUris', { keyPath: 'uri' });
+				
+				for (const s of clearableStores) await tx.objectStore(s).clear();
 				
 			}
 			

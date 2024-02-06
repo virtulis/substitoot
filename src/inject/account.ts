@@ -97,15 +97,27 @@ export async function wrapAccountStatusesRequest(xhr: PatchedXHR, parts: string[
 		showStatus('initMore');
 		
 		const account: Account = await fetch(`/api/v1/accounts/${id}`).then(res => res.json());
+		const url = new URL(account.uri);
+		if (url.hostname == location.hostname) {
+			showStatus('success');
+			hide();
+			return;
+		}
 		
 		const remoteStatuses = await callSubstitoot('fetchRemoteAccountStatuses', account.acct, account.uri, query.toString());
 		if (canceled) return;
 		if (!remoteStatuses) return fail('Remote request failed');
 		
 		const known = new Set(localStatuses.map(st => st.uri));
-		const missing = new Set(remoteStatuses.map(st => st.uri).filter(u => !known.has(u)));
+		const missing = new Set(
+			remoteStatuses
+				.filter(st => !st.reblog) // FIXME fetching boosts is broken, so just don't i guess
+				.map(st => st.uri)
+				.filter(u => !known.has(u))
+		);
 		remoteCount = missing.size;
 		loadedCount = 0;
+		log('known', known);
 		log('missing', missing);
 		
 		if (!remoteCount) {

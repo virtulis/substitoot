@@ -65,7 +65,7 @@ async function doFetchInstanceInfo(instance: InstanceInfo) {
 	}
 	
 	const json = await res.json().catch(reportAndNull);
-	console.log(instance.host, json);
+	console.log(instance.host, json?.version, json);
 	
 	if (!json) {
 		instance.anyRequestSucceeded = true;

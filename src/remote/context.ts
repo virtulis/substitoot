@@ -38,34 +38,49 @@ export async function fetchRemoteStatusAndContext(uri: string) {
 		});
 	};
 	
+	const fetchMasto = (base: string) => remoteRequests.perform(
+		base,
+		async () => {
+			
+			console.log('fetch', base);
+			const status: Maybe<Status> = await callApi(base).then(checkResponse);
+			if (!status) return null;
+			
+			const ctxUrl = `${base}/context`;
+			console.log('fetch', ctxUrl);
+			
+			const context: Maybe<ContextResponse> = await callApi(ctxUrl).then(checkResponse);
+			instance.canRequestContext = !!context;
+			await setInstanceInfo(instance);
+			
+			return <RemoteStatusResponse> {
+				status,
+				context,
+				counts: pick(status, countsKeys),
+			};
+			
+		},
+	);
+	
 	// Mastodon or compatible
 	const masto = url.pathname.match(/^\/users\/(.*?)\/statuses\/(.*?)\/?$/);
 	if (instance.isCompatible && masto) {
-		const remId = masto[2];
-		const stUri = `https://${url.hostname}/api/v1/statuses/${remId}`;
-		return await remoteRequests.perform(
-			stUri,
-			async () => {
-				
-				console.log('fetch', stUri);
-				const status: Maybe<Status> = await callApi(stUri).then(checkResponse);
-				if (!status) return null;
-				
-				const ctxUrl = `${stUri}/context`;
-				console.log('fetch', ctxUrl);
-				
-				const context: Maybe<ContextResponse> = await callApi(ctxUrl).then(checkResponse);
-				instance.canRequestContext = !!context;
-				await setInstanceInfo(instance);
-				
-				return <RemoteStatusResponse> {
-					status,
-					context,
-					counts: pick(status, countsKeys),
-				};
-				
-			},
-		);
+		return await fetchMasto(`https://${url.hostname}/api/v1/statuses/${masto[2]}`);
+	}
+	
+	// Akkoma
+	if (instance.isCompatible && url.pathname.match(/^\/objects\/.*/)) {
+		const redir = await callApi(uri, {});
+		const loc = redir.url;
+		const akko = loc && new URL(loc).pathname.match(/^\/notice\/([^/]+)$/);
+		console.log('akko?', akko, loc, redir);
+		if (akko) return await fetchMasto(`https://${url.hostname}/api/v1/statuses/${akko[1]}`);
+	}
+	
+	// Misskey
+	const miss = url.pathname.match(/^\/notes\/([^/]+)/);
+	if (instance.isCompatible && miss) {
+		return await fetchMasto(`https://${url.hostname}/api/v1/statuses/${miss[1]}`);
 	}
 	
 	return null;

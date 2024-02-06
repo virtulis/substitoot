@@ -99,6 +99,13 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		if (mainStatus) await callSubstitoot('cacheStatusUri', { instance, id, uri: mainStatus.uri });
 		if (canceled) return;
 		
+		if (!['public', 'unlisted'].includes(mainStatus.visibility!)) {
+			errorInfo = 'Non-public status';
+			showStatus('success');
+			setTimeout(hide, 2000);
+			return;
+		}
+		
 		const known = new Set<string>([mainStatus.uri]);
 		for (const list of contextLists) for (const st of localResponse[list]) {
 			known.add(st.uri);

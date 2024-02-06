@@ -1,7 +1,6 @@
 // Wrapper to make an HTTP request to remote instances
 
 import { InstanceInfo, Maybe } from '../types.js';
-import { packageVersion } from '../util.js';
 import { fetchInstanceInfo } from './info.js';
 
 export const ownRequests = new Set<string>();
@@ -21,7 +20,11 @@ export async function callApi(
 	
 	init ??= {};
 	init.headers ??= {};
-	init.headers['User-Agent'] = `Substitoot/${packageVersion} (https://substitoot.kludge.guru) ${navigator.userAgent}`;
+	
+	// TODO this breaks CORS with some Pleroma instances when there is no blanket host permission (which we don't want)
+	// init.headers['User-Agent'] = `Substitoot/${packageVersion} (https://substitoot.kludge.guru) ${navigator.userAgent}`;
+	
+	init.credentials = 'omit';
 	
 	let promise = fetch(url, init);
 	if (instance && updateInstance !== false) {
