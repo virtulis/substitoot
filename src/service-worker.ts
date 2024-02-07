@@ -5,7 +5,7 @@ import { clearMetadata, initStorage } from './storage.js';
 import { intVersion, packageVersion, reportAndNull } from './util.js';
 
 import { setUpAPIPort } from './api/impl.js';
-import { anyBrowser, asChrome, asFirefox } from './browsers/any.js';
+import { anyBrowser, asChrome } from './browsers/any.js';
 import { updateChromeConfig } from './browsers/chrome.js';
 import { displayNotice, lastNoticeVersion } from './notice.js';
 
@@ -39,5 +39,7 @@ asChrome.runtime.onMessage.addListener(async (message) => {
 		await clearMetadata();
 	}
 });
+
+asChrome.action.onClicked.addListener(() => asChrome.runtime.openOptionsPage());
 
 setUpAPIPort();

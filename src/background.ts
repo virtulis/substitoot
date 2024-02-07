@@ -41,3 +41,5 @@ asFirefox.runtime.onMessage.addListener(async (message) => {
 		await clearMetadata();
 	}
 });
+
+asFirefox.browserAction?.onClicked.addListener(() => asFirefox.runtime.openOptionsPage());

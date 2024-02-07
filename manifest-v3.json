@@ -4,7 +4,7 @@
 	"name": "Substitoot — improved Mastodon federation",
 	"short_name": "Substitoot",
 	"author": "virtulis",
-	"version": "0.7.0.3",
+	"version": "0.7.1.0",
 	"homepage_url": "https://github.com/virtulis/substitoot",
 	"icons": {
 		"48": "static/logo48.png",
@@ -30,5 +30,6 @@
 			"resources": ["dist/inject.js"],
 			"matches": ["https://*/*"]
 		}
-	]
+	],
+	"action": {}
 }
