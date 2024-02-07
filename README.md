@@ -32,9 +32,9 @@ If nothing helps, please report a bug. Thanks!
 
 ### Does this support servers other than Mastodon?
 
-It can fetch statuses and contexts from Akkoma/Pleroma and Misskey/FireFish/Sharkey/IceShrimp/etc.
+It can fetch statuses and contexts from Akkoma/Pleroma and most Misskey/FireFish/Sharkey/IceShrimp/etc instances, better compatibility is a work in progress.
 
-As of 0.7.0 it might do *something* if you attempt to use it on an Akkoma/Pleroma home instance, but I don't have one to check.
+However, it can only run on Mastodon as a home server, and has been tested to work on vanilla and Glitch editions on current development version (4.3.0).
 
 ### How does this work internally?
 
