@@ -8,12 +8,19 @@ export interface Settings {
 	instances: string[];
 	skipInstances: string[];
 	
-	statusRequestTimeout: number;
-	contextRequestTimeout: number;
-	searchTimeout: number;
+	remoteUserRequestTimeout: number;
+	remoteContextRequestTimeout: number;
+	localSearchTimeout: number;
 	instanceCheckTimeout: number;
 	
 	maxParallelSearchReqs: number;
+	minSearchRequestInterval: number;
+	delayAfterFailedLocalReq: number;
+	maxRemoteAccountFetchFailures: number;
+	
+	hideNoOpToastAfter: number;
+	hideSuccessToastAfter: number;
+	hideFailedToastAfter: number;
 	
 }
 
@@ -22,12 +29,19 @@ export const defaultSettings: Settings = {
 	instances: [],
 	skipInstances: [],
 	
-	statusRequestTimeout: 5_000,
-	contextRequestTimeout: 10_000,
-	searchTimeout: 10_000,
-	instanceCheckTimeout: 5_000,
+	remoteUserRequestTimeout: 10_000,
+	remoteContextRequestTimeout: 10_000,
+	localSearchTimeout: 10_000,
+	instanceCheckTimeout: 10_000,
 	
 	maxParallelSearchReqs: 5,
+	minSearchRequestInterval: 100,
+	delayAfterFailedLocalReq: 2000,
+	maxRemoteAccountFetchFailures: 3,
+	
+	hideNoOpToastAfter: 1000,
+	hideSuccessToastAfter: 2000,
+	hideFailedToastAfter: 5000,
 	
 };
 

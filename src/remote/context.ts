@@ -6,7 +6,7 @@ import { getSettings } from '../settings.js';
 import { callApi } from '../instances/fetch.js';
 import { fetchInstanceInfo, setInstanceInfo } from '../instances/info.js';
 
-const remoteRequests = new ActiveRequestMap<RemoteStatusResponse>({ timeout: () => getSettings().contextRequestTimeout });
+const remoteRequests = new ActiveRequestMap<RemoteStatusResponse>({ timeout: () => getSettings().remoteContextRequestTimeout });
 
 export async function fetchRemoteStatusAndContext(uri: string) {
 

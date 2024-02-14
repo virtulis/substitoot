@@ -52,11 +52,19 @@ export async function wrapAccountStatusesRequest(xhr: PatchedXHR, parts: string[
 	
 	log('begin', key);
 	showStatus('init');
+	const {
+		delayAfterFailedLocalReq,
+		hideFailedToastAfter,
+		hideNoOpToastAfter,
+		hideSuccessToastAfter,
+		minSearchRequestInterval,
+		skipInstances,
+		maxRemoteAccountFetchFailures,
+	} = await callSubstitoot('getSettings');
 	const fail = (info: string) => {
-		canceled = true;
 		errorInfo = info;
 		showStatus('failed');
-		setTimeout(hide, 5000);
+		setTimeout(hide, hideFailedToastAfter);
 	};
 	
 	(async () => {
@@ -99,8 +107,15 @@ export async function wrapAccountStatusesRequest(xhr: PatchedXHR, parts: string[
 		const account: Account = await fetch(`/api/v1/accounts/${id}`).then(res => res.json());
 		const url = new URL(account.uri);
 		if (url.hostname == location.hostname) {
+			errorInfo = 'Local';
 			showStatus('success');
-			hide();
+			setTimeout(hide, hideNoOpToastAfter);
+			return;
+		}
+		if (skipInstances.includes(url.hostname)) {
+			errorInfo = 'Ignored instance';
+			showStatus('partSuccess');
+			setTimeout(hide, hideNoOpToastAfter);
 			return;
 		}
 		
@@ -122,7 +137,7 @@ export async function wrapAccountStatusesRequest(xhr: PatchedXHR, parts: string[
 		
 		if (!remoteCount) {
 			showStatus('success');
-			setTimeout(hide, 2000);
+			setTimeout(hide, hideNoOpToastAfter);
 			return;
 		}
 		
@@ -141,7 +156,7 @@ export async function wrapAccountStatusesRequest(xhr: PatchedXHR, parts: string[
 		};
 		
 		let last = 0;
-		let delay = 200;
+		let delay = minSearchRequestInterval;
 		for (const uri of missing) {
 			
 			const now = Date.now();
@@ -155,10 +170,10 @@ export async function wrapAccountStatusesRequest(xhr: PatchedXHR, parts: string[
 			const res = await fetch(search);
 			loadedCount++;
 			if (res.headers.has('x-ratelimit-remaining') && res.headers.has('date')) {
-				delay = decideRequestDelay(res);
+				delay = decideRequestDelay(res, minSearchRequestInterval);
 			}
 			if (res.status >= 400) {
-				delay = 2000;
+				delay = delayAfterFailedLocalReq;
 				failureCount++;
 				return;
 			}
@@ -170,8 +185,8 @@ export async function wrapAccountStatusesRequest(xhr: PatchedXHR, parts: string[
 			}
 			else {
 				failureCount++;
-				if (failureCount >= 3) break;
-				delay = 2000;
+				if (failureCount >= maxRemoteAccountFetchFailures) break;
+				delay = delayAfterFailedLocalReq;
 			}
 			showStatus(failureCount ? 'partFailed' : 'inProgress');
 			
@@ -180,7 +195,7 @@ export async function wrapAccountStatusesRequest(xhr: PatchedXHR, parts: string[
 		if (loadedCount - failureCount < 0) return fail('Too many failures');
 		
 		showStatus(failureCount ? 'partSuccess' : 'success');
-		setTimeout(hide, 5000);
+		setTimeout(hide, hideSuccessToastAfter);
 	
 	})().catch(e => {
 		console.error(e);

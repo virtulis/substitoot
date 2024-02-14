@@ -1,7 +1,7 @@
 // Client-side helpers for the options page (see ../static/options.html)
 
 import { computePermissions, defaultSettings, Settings } from './settings.js';
-import { reportAndNull } from './util.js';
+import { isIn, reportAndNull } from './util.js';
 import { anyBrowser, asChrome, maybeFirefox } from './browsers/any.js';
 import { Maybe } from './types.js';
 
@@ -19,27 +19,23 @@ Object.values(inputs).forEach(el => {
 });
 
 function updateUI() {
-	for (const key of ['instances', 'skipInstances'] as const) {
-		if (focused == inputs[key]) continue;
-		inputs[key].value = settings[key].join(', ');
+	for (const key of keys) {
+		const input = inputs[key];
+		if (!input || focused == input) continue;
+		if (isIn(key, ['instances', 'skipInstances'])) {
+			input.value = settings[key].join(', ');
+		}
+		else if (isIn(typeof settings[key], ['number', 'string'])) {
+			input.value = String(settings[key]);
+		}
 	}
-	// for (const key of ['cacheContentMins'] as const) {
-	// 	if (focused == inputs[key]) continue;
-	// 	inputs[key].value = String(settings[key]);
-	// }
-	// for (const key of [
-	// 	'bypassFollowed',
-	// 	'preloadHome',
-	// ] as const) {
-	// 	inputs[key].checked = settings[key];
-	// }
 }
 
 async function load() {
 	const res = await anyBrowser.storage.sync.get('settings');
 	if (res.settings) settings = { ...settings, ...res.settings };
 	updateUI();
-	checkPermissions();
+	checkPermissions().catch(reportAndNull);
 }
 
 async function save() {
@@ -63,6 +59,7 @@ async function requestPermissions() {
 	await checkPermissions();
 }
 
+// String inputs
 for (const key of ['instances', 'skipInstances'] as const) {
 	inputs[key].addEventListener('change', () => {
 		settings[key] = inputs[key].value.split(',').map(
@@ -72,20 +69,38 @@ for (const key of ['instances', 'skipInstances'] as const) {
 		if (key == 'instances') requestPermissions();
 	});
 }
-// for (const key of ['cacheContentMins'] as const) {
-// 	inputs[key].addEventListener('input', () => {
-// 		const num = Number(inputs[key].value);
-// 		if (!isFinite(num)) return;
-// 		settings[key] = num;
-// 		save();
-// 	});
-// }
-// for (const key of ['bypassFollowed', 'preloadHome'] as const) {
-// 	inputs[key].addEventListener('change', () => {
-// 		settings[key] = inputs[key].checked;
-// 		save();
-// 	});
-// }
+
+// Advanced
+const advCb = document.getElementById('showAdvanced') as HTMLInputElement;
+const advCtr = document.getElementById('advanced')!;
+advCb.onchange = () => advCtr.classList.toggle('hidden', !advCb.checked);
+for (const key of keys) {
+	if (inputs[key]) continue;
+	const type = typeof defaultSettings[key];
+	if (isIn(type, ['number', 'string'])) {
+		
+		const ctr = document.createElement('div');
+		ctr.className = 'column';
+		
+		const label = document.createElement('label');
+		label.htmlFor = key;
+		label.textContent = key;
+		
+		const input = document.createElement('input');
+		input.id = key;
+		input.pattern = '\\d+';
+		input.addEventListener('change', () => {
+			const val = input.value.trim();
+			if (type == 'number' && isFinite(Number(val))) settings[key] = Number(val) as any;
+			else settings[key] = val as any;
+		});
+		
+		inputs[key] = input;
+		ctr.append(label, input);
+		advCtr.append(ctr);
+		
+	}
+}
 
 document.getElementById('fixPermissions')!.addEventListener('click', requestPermissions);
 
@@ -97,4 +112,4 @@ asChrome.permissions.onRemoved.addListener(checkPermissions);
 
 if (!maybeFirefox) document.getElementById('legacyModeSwitch')?.classList.add('hidden');
 
-load();
+load().catch(reportAndNull);

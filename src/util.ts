@@ -32,6 +32,14 @@ export function omit<T, K extends keyof T>(obj: T, ...keys: readonly (K | readon
 	return out;
 }
 
+/**
+ * Checks whether value is an element of the list and asserts that the value is of the element-type for that list.
+ * E.g. if (isIn(value, ['a', 'b'] as const)) then value: 'a' | 'b'
+ */
+export function isIn<V, const T extends readonly (V | string | number)[]>(value: V, list: T): value is V & T[number] {
+	return list.includes(value);
+}
+
 export function sleep<T>(ms: number, value: T): Promise<T>;
 export function sleep(ms: number): Promise<null>;
 export function sleep(ms: number, value = null) {
@@ -93,12 +101,12 @@ export class ActiveRequestMap<T> {
 
 }
 
-export function decideRequestDelay(res: Response) {
+export function decideRequestDelay(res: Response, min = 100, max = 5000) {
 	const limit = Number(res.headers.get('x-ratelimit-remaining')) - 5;
 	const now = new Date(res.headers.get('date')!);
 	const until = new Date(res.headers.get('x-ratelimit-reset')!);
 	const diff = until.getTime() - now.getTime();
-	const delay = Math.min(5000, Math.max(100, diff / limit));
+	const delay = Math.min(max, Math.max(min, diff / limit));
 	console.log('delay = ', delay, { limit, now, until, diff });
 	return delay;
 }

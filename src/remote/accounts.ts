@@ -7,7 +7,7 @@ import { ActiveRequestMap } from '../util.js';
 import { callApi } from '../instances/fetch.js';
 import { fetchInstanceInfo, setInstanceInfo } from '../instances/info.js';
 
-const statusesRequests = new ActiveRequestMap<Status[]>({ timeout: () => getSettings().statusRequestTimeout });
+const statusesRequests = new ActiveRequestMap<Status[]>({ timeout: () => getSettings().remoteUserRequestTimeout });
 
 export async function fetchRemoteAccountStatuses(acct: string, uri: string, query: string) {
 	

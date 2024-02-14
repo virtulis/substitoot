@@ -44,10 +44,20 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		text.textContent = errorInfo || `${localCount ?? '·'} + ${loadedCount ?? '·'} / ${remoteCount ?? '·'} ${failureCount ? `- ${failureCount} failed` : ''}`;
 	};
 	showStatus('init');
+	
+	const {
+		delayAfterFailedLocalReq,
+		hideFailedToastAfter,
+		hideNoOpToastAfter,
+		hideSuccessToastAfter,
+		maxParallelSearchReqs,
+		minSearchRequestInterval,
+		skipInstances,
+	} = await callSubstitoot('getSettings');
 	const fail = (info: string) => {
 		errorInfo = info;
 		showStatus('failed');
-		setTimeout(hide, 5000);
+		setTimeout(hide, hideFailedToastAfter);
 	};
 	
 	(async () => {
@@ -86,8 +96,6 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		if (!localResponse) return fail('Local request failed?');
 		log('localResponse', localResponse);
 		
-		const settings = await callSubstitoot('getSettings');
-		
 		const knownIds = new Set<string>([id]);
 		for (const list of contextLists) for (const st of localResponse[list]) {
 			knownIds.add(st.id);
@@ -102,7 +110,7 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		if (!['public', 'unlisted'].includes(mainStatus.visibility!)) {
 			errorInfo = 'Non-public status';
 			showStatus('success');
-			setTimeout(hide, 2000);
+			setTimeout(hide, hideNoOpToastAfter);
 			return;
 		}
 		
@@ -114,8 +122,15 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		
 		const url = new URL(mainStatus.uri);
 		if (url.hostname == instance) {
+			errorInfo = 'Local';
 			showStatus('success');
-			hide();
+			setTimeout(hide, hideNoOpToastAfter);
+			return;
+		}
+		if (skipInstances.includes(url.hostname)) {
+			errorInfo = 'Ignored instance';
+			showStatus('partSuccess');
+			setTimeout(hide, hideNoOpToastAfter);
 			return;
 		}
 		
@@ -153,7 +168,6 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		showStatus('inProgress');
 		const active = new Set<Promise<any>>();
 		const readyChildren = new Map<string, Status[]>;
-		const maxActive = settings.maxParallelSearchReqs;
 		let emitQ = Promise.resolve();
 		const emit = async (statuses: Status[]) => {
 		
@@ -210,10 +224,13 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 			callSubstitoot('cacheStatusUri', { instance, id: child.id, uri: child.uri }).catch(reportAndNull);
 		};
 		let last = 0;
-		let delay = 200;
+		let delay = minSearchRequestInterval;
 		for (const uri of missing) {
 		
-			if (active.size >= maxActive) await Promise.race(active);
+			const url = new URL(uri);
+			if (skipInstances.includes(url.hostname)) continue;
+			
+			if (active.size >= maxParallelSearchReqs) await Promise.race(active);
 			const now = Date.now();
 			if (now - last < delay) await new Promise(resolve => setTimeout(resolve, delay - (now - last)));
 			if (canceled) return;
@@ -226,10 +243,10 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 				const res = await fetch(search);
 				loadedCount++;
 				if (res.headers.has('x-ratelimit-remaining') && res.headers.has('date')) {
-					delay = decideRequestDelay(res);
+					delay = decideRequestDelay(res, minSearchRequestInterval);
 				}
 				if (res.status >= 400) {
-					delay = 2000;
+					delay = delayAfterFailedLocalReq;
 					failureCount++;
 					return;
 				}
@@ -254,7 +271,7 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 		if (left.length) emitQ.then(() => emit(left));
 		
 		showStatus(failureCount ? 'partSuccess' : 'success');
-		setTimeout(hide, 2000);
+		setTimeout(hide, hideSuccessToastAfter);
 		
 	})().catch(e => {
 		console.error(e);
