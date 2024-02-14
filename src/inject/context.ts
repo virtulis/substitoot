@@ -191,7 +191,7 @@ export async function wrapContextRequest(xhr: PatchedXHR, parts: string[]) {
 			await new Promise(resolve => setTimeout(resolve, 50));
 			
 			// this triggers normalizeContext and actually puts the status on the screen (hopefully)
-			getReduxStore()?.dispatch((dispatch, getState) => {
+			getReduxStore()?.dispatch(dispatch => {
 				dispatch({
 					type: 'CONTEXT_FETCH_SUCCESS',
 					id,
