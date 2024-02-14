@@ -51,7 +51,8 @@
 			display: none;
 		}
 		.fix.visible {
-			display: block;
+			display: flex;
+			flex-wrap: wrap;
 		}
 		.fix button {
 			outline: 2px solid rgba(255, 0, 0, 0.5);
@@ -71,8 +72,8 @@
 </div>
 
 <div class="column">
-	<h3><label for="instances">Enable on instances:</label></h3>
-	<div>Comma-separated list of instance domain names to enable the extension on:</div>
+	<h3><label for="instances">Home instance:</label></h3>
+	<div>Domain name(s) where you are signed in and the extension should be enabled. Separate with a comma if multiple.</div>
 	<input id="instances" placeholder="mastodon.social, https://loud.computer/, ..."/>
 </div>
 <!--div class="row">
@@ -83,7 +84,7 @@
 </div-->
 <div class="column">
 	<h4><label for="skipInstances">Disable for instances:</label></h4>
-	<div>Comma-separated list of domain names that the extension should not try to fetch statuses from. Will still include them if found elsewhere.</div>
+	<div>Comma-separated list of domain names that the extension should not try to fetch statuses from.</div>
 	<input id="skipInstances" placeholder="kludge.guru, ..."/>
 </div>
 
